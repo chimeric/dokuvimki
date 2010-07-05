@@ -58,11 +58,25 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # function comments
 # help
 # test id_lookup()
-# fix index refresh for DWEdit etc.
+# FIXME provide a way to call DWClose <buffername>
+# nicer highlighting for revisions
+# FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
+# FIXME DWSaveAll
+
 
 class DokuVimKi:
+    """
+    Provides all necessary functionality to interface between the DokuWiki
+    XMLRPC API and vim.
+    """
+
 
     def __init__(self):
+        """
+        Instantiates special buffers, setup the xmlrpc connection and loads the
+        page index and displays the recent changes of the last 7 days.
+        """
+
         self.buffers = {}
         self.buffers['search']    = Buffer('search', 'nofile')
         self.buffers['backlinks'] = Buffer('backlinks', 'nofile')
@@ -84,6 +98,10 @@ class DokuVimKi:
         
 
     def xmlrpc_init(self):
+        """
+        Establishes the xmlrpc connection to the remote wiki.
+        """
+
         self.dw_user = vim.eval('g:DokuVimKi_USER')
         self.dw_pass = vim.eval('g:DokuVimKi_PASS')
         self.dw_url  = vim.eval('g:DokuVimKi_URL')
@@ -102,6 +120,10 @@ class DokuVimKi:
 
 
     def edit(self, wp, rev=''):
+        """
+        Opens a given wiki page, or a given revision of a wiki page for
+        editing.
+        """
 
         self.focus(2)
 
@@ -143,74 +165,12 @@ class DokuVimKi:
             vim.command('silent! buffer! ' + self.buffers[wp].num)
 
 
-    def rev_edit(self):
-        row, col = vim.current.window.cursor
-        wp  = vim.current.buffer[row-1].split("\t")[0]
-        rev = vim.current.buffer[row-1].split("\t")[2]
-        self.edit(wp, rev)
-
-
-    def id_lookup(self):
-        line = vim.current.line
-        row, col = vim.current.window.cursor
-
-        # get namespace from current page
-        wp = vim.current.buffer.name.rsplit('/', 1)[1]
-        ns = wp.rsplit(':', 1)[0]
-        if ns == wp:
-            ns = ''
-
-        # look for link syntax on the left and right from the current curser position
-        reL = re.compile('\[{2}[^]]*$') # opening link syntax
-        reR = re.compile('^[^\[]*]{2}') # closing link syntax
-
-        L = reL.search(line[:col])
-        R = reR.search(line[col:])
-
-        # if both matched we probably have a link
-        if L and R:
-
-            # sanitize match remove anchors and everything after '|'
-            id = (L.group() + R.group()).strip('[]').split('|')[0].split('#')[0]
-
-            # check if it's not and external/interwiki/share link
-            if id.find('>') == -1 and id.find('://') == -1 and id.find('\\') == -1:
-
-                # check if useshlash is used
-                if id.find('/'):
-                    id = id.replace('/', ':')
-
-                # this is _almost_ a rip off of DokuWikis resolve_id() function
-                if id[0] == '.':
-                    re_sanitize = re.compile('(\.(?=[^:\.]))')
-                    id = re_sanitize.sub('.:', id)
-                    id = ns + ':' + id
-                    path = id.split(':')
-
-                    result = []
-                    for dir in path:
-                        if dir == '..':
-                            try:
-                                if result[-1] == '..':
-                                    result.append('..')
-                                elif not result.pop():
-                                    result.append('..')
-                            except IndexError:
-                                pass
-                        elif dir and dir != '.' and not len(dir.split('.')) > 2:
-                            result.append(dir)
-
-                    id = ':'.join(result)
-
-                elif ns and id[0] != ':' and id.find(':', 0) == -1:
-                    id = ns + ':' + id
-
-                # we're done, open the page for editing
-                print >>sys.stdout, id
-                self.edit(id)
-
-
     def save(self, sum='', minor=0):
+        """
+        Saves the current buffer. Works only if the buffer is a wiki page.
+        Deleting wiki pages works like using the web interface, just delete all
+        text and save.
+        """
         
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if not self.buffers[wp].iswp: 
@@ -245,6 +205,10 @@ class DokuVimKi:
 
     
     def index(self, query='', refresh=False):
+        """
+        Build the index used to navigate the remote wiki.
+        """
+
         index = []
         pages = []
         dirs  = []
@@ -310,6 +274,9 @@ class DokuVimKi:
 
 
     def changes(self, timestamp=False):
+        """
+        Shows the last changes on the remote wiki.
+        """
         
         self.focus(2)
 
@@ -337,6 +304,10 @@ class DokuVimKi:
 
 
     def revisions(self, wp='', first=0):
+        """
+        Display revisions for a certain page if any.
+        """
+
         if not wp or wp[-1] == ':':
             return
 
@@ -365,6 +336,10 @@ class DokuVimKi:
 
 
     def backlinks(self, wp=''):
+        """
+        Display backlinks for a certain page if any.
+        """
+
         if not wp or wp[-1] == ':':
             return
 
@@ -389,6 +364,9 @@ class DokuVimKi:
 
 
     def search(self, pattern='', refresh=False):
+        """
+        Search the page list for matching pages and display them for editing.
+        """
 
         self.focus(2)
 
@@ -415,6 +393,11 @@ class DokuVimKi:
     
 
     def close(self):
+        """
+        Closes the current buffer. Works only if the current buffer is a wiki
+        page.  The buffer is also removed from the buffer stack.
+        """
+
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if self.buffers[wp].iswp: 
             vim.command('bp!')
@@ -425,17 +408,40 @@ class DokuVimKi:
 
 
     def help(self):
+        """
+        FIXME show help
+        """
 
         self.focus(2)
         vim.command('silent! buffer! ' + self.buffers['help'].num)
 
 
+    def rev_edit(self):
+        """
+        Special mapping for editing revisions from the revisions listing.
+        """
+
+        row, col = vim.current.window.cursor
+        wp  = vim.current.buffer[row-1].split("\t")[0]
+        rev = vim.current.buffer[row-1].split("\t")[2]
+        self.edit(wp, rev)
+
+
     def focus(self, winnr):
+        """
+        Convenience function to switch the current window focus.
+        """
+
         if int(vim.eval('winnr()')) != winnr:
             vim.command(str(winnr) + 'wincmd w')
 
     
     def refresh(self):
+        """
+        Refreshes the page index by retrieving a fresh list of all pages on the
+        remote server and updating the completion dictionary.
+        """
+
         print >>sys.stdout, "Refreshing page index!"
         data = self.xmlrpc.all_pages()
         self.pages = []
@@ -449,7 +455,75 @@ class DokuVimKi:
         self.dict.write("\n".join(self.pages))
 
 
+    def id_lookup(self):
+        """
+        When editing pages, hiting enter while over a wiki link will open the
+        page. This functions tries to guess the correct wiki page.
+        """
+        line = vim.current.line
+        row, col = vim.current.window.cursor
+
+        # get namespace from current page
+        wp = vim.current.buffer.name.rsplit('/', 1)[1]
+        ns = wp.rsplit(':', 1)[0]
+        if ns == wp:
+            ns = ''
+
+        # look for link syntax on the left and right from the current curser position
+        reL = re.compile('\[{2}[^]]*$') # opening link syntax
+        reR = re.compile('^[^\[]*]{2}') # closing link syntax
+
+        L = reL.search(line[:col])
+        R = reR.search(line[col:])
+
+        # if both matched we probably have a link
+        if L and R:
+
+            # sanitize match remove anchors and everything after '|'
+            id = (L.group() + R.group()).strip('[]').split('|')[0].split('#')[0]
+
+            # check if it's not and external/interwiki/share link
+            if id.find('>') == -1 and id.find('://') == -1 and id.find('\\') == -1:
+
+                # check if useshlash is used
+                if id.find('/'):
+                    id = id.replace('/', ':')
+
+                # this is _almost_ a rip off of DokuWikis resolve_id() function
+                if id[0] == '.':
+                    re_sanitize = re.compile('(\.(?=[^:\.]))')
+                    id = re_sanitize.sub('.:', id)
+                    id = ns + ':' + id
+                    path = id.split(':')
+
+                    result = []
+                    for dir in path:
+                        if dir == '..':
+                            try:
+                                if result[-1] == '..':
+                                    result.append('..')
+                                elif not result.pop():
+                                    result.append('..')
+                            except IndexError:
+                                pass
+                        elif dir and dir != '.' and not len(dir.split('.')) > 2:
+                            result.append(dir)
+
+                    id = ':'.join(result)
+
+                elif ns and id[0] != ':' and id.find(':', 0) == -1:
+                    id = ns + ':' + id
+
+                # we're done, open the page for editing
+                print >>sys.stdout, id
+                self.edit(id)
+
+
     def cmd(self, cmd):
+        """
+        Callback function to provides various functionality for the page index
+        (like open namespaces or triggering edit showing backlinks etc).
+        """
 
         row, col = vim.current.window.cursor
         line = vim.current.buffer[row-1]
@@ -477,6 +551,16 @@ class DokuVimKi:
 
 
 class Buffer():
+    """
+    Representates a vim buffer object. Used to manage keep track of all opened
+    pages and to handle the dokuvimki special buffers.
+
+        self.num    = buffer number (starts at 1)
+        self.id     = buffer id (starts at 0)
+        self.buf    = vim buffer object
+        self.name   = buffer name   
+        self.iswp   = True if buffer represents a wiki page
+    """
 
     id     = None
     num    = None
@@ -484,6 +568,9 @@ class Buffer():
     buf    = None
 
     def __init__(self, name, type, iswp=False):
+        """
+        Instanziates a new buffer.
+        """
         vim.command('badd ' + name)
         self.num  = vim.eval('bufnr("' + name + '")')
         self.id   = int(self.num) - 1
