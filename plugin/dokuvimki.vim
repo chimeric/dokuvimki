@@ -87,10 +87,6 @@ class DokuVimKi:
         self.buffers['index']     = Buffer('index', 'nofile')
         self.buffers['help']      = Buffer('help', 'nofile')
 
-        self.locks = {}
-        self.locks['lock']   = []
-        self.locks['unlock'] = []
-
         self.cur_ns = ''
         self.pages  = []
 
