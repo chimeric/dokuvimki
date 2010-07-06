@@ -62,6 +62,8 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # nicer highlighting for revisions
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 # FIXME DWSaveAll
+# FIXME ACL checks!!! on DWEdit??
+# FIXME remove all locks on quit of all buffers in the pages list
 
 
 class DokuVimKi:
@@ -84,6 +86,10 @@ class DokuVimKi:
         self.buffers['changes']   = Buffer('changes', 'nofile')
         self.buffers['index']     = Buffer('index', 'nofile')
         self.buffers['help']      = Buffer('help', 'nofile')
+
+        self.locks = {}
+        self.locks['lock']   = []
+        self.locks['unlock'] = []
 
         self.cur_ns = ''
         self.pages  = []
@@ -128,8 +134,13 @@ class DokuVimKi:
         self.focus(2)
 
         if not self.buffers.has_key(wp):
-            self.buffers[wp] = Buffer(wp, 'acwrite', True)
+
+            if not self.lock(wp):
+                return
+
+            self.buffers[wp]   = Buffer(wp, 'acwrite', True)
             self.needs_refresh = True
+
             try:
                 print >>sys.stdout, "Opening %s for editing ..." % wp
                 if rev:
@@ -294,6 +305,7 @@ class DokuVimKi:
                     line = "\t".join(map(lambda x: str(change[x]), ['name', 'lastModified', 'version', 'author']))
                     lines.append(line)
                 
+                lines.reverse()
                 self.buffers['changes'].buf[:] = lines
                 vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
                 vim.command('setlocal nomodifiable')
@@ -403,6 +415,8 @@ class DokuVimKi:
             vim.command('bp!')
             vim.command('bdel! ' + self.buffers[wp].num)
             del self.buffers[wp]
+            # FIXME test for success?
+            self.unlock(wp)
         else:
             print >>sys.stderr, 'You cannot close special buffer "%s"!' % wp
 
@@ -453,6 +467,54 @@ class DokuVimKi:
         self.pages.sort()
         self.dict.seek(0)
         self.dict.write("\n".join(self.pages))
+
+
+    def lock(self, wp):
+        """
+        Tries to obtain a lock given wiki page.
+        """
+
+        locks = {}
+        locks['lock']   = [ wp ]
+        locks['unlock'] = []
+
+        result = self.set_locks(locks)
+
+        if locks['lock'] == result['locked']:
+            print >>sys.stdout, "Locked page %s for editing. You have to wait until the lock expires." % wp
+            return True
+        else:
+            print >>sys.stderr, "Failed to lock page %s" % wp
+            return False
+
+    
+    def unlock(self, wp):
+        """
+        Tries to unlock a given wiki page.
+        """
+
+        locks = {}
+        locks['lock']   = []
+        locks['unlock'] = [ wp ]
+
+        result = self.set_locks(locks)
+        if locks['unlock'] == result['unlocked']:
+            return True
+        else:
+            print >>sys.stderr, "Failed to unlock page %s" % wp
+            return False
+
+
+    def set_locks(self, locks):
+        """
+        Locks unlocks a given set of pages.
+        """
+
+        try:
+            return self.xmlrpc.set_locks(locks)
+        except StandardError, err:
+            # FIXME error handling
+            print >>sys.stderr, err
 
 
     def id_lookup(self):
