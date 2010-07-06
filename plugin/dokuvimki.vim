@@ -54,10 +54,9 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # ~/bin script for launching
 # re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
-# FIXME check if a pages was modified but not send!!!
+# FIXME check if a page was modified but not send!!! remove the buffer! calls?
 # help
 # test id_lookup()
-# nicer highlighting for revisions
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 # FIXME DWSaveAll
 # FIXME remove all locks on quit of all buffers in the pages list
@@ -353,6 +352,15 @@ class DokuVimKi:
                 print >>sys.stdout, "loaded revisions for :%s" % wp
                 vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
                 vim.command('setlocal nomodifiable')
+
+                vim.command('syn match DokuVimKi_REV_PAGE /^\(\w\|:\)*/')
+                vim.command('syn match DokuVimKi_REV_TS /\s\d*\s/')
+                vim.command('syn match DokuVimKi_REV_CHANGE /\s\w\{1}\s/')
+
+                vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow')
+                vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow')
+                vim.command('hi DokuVimKi_REV_CHANGE cterm=bold ctermfg=Yellow')
+
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No revisions found for page: %s' % wp
 
