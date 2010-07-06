@@ -55,14 +55,11 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
 # FIXME check if a pages was modified but not send!!!
-# function comments
 # help
 # test id_lookup()
-# FIXME provide a way to call DWClose <buffername>
 # nicer highlighting for revisions
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 # FIXME DWSaveAll
-# FIXME ACL checks!!! on DWEdit??
 # FIXME remove all locks on quit of all buffers in the pages list
 
 
@@ -124,31 +121,53 @@ class DokuVimKi:
     def edit(self, wp, rev=''):
         """
         Opens a given wiki page, or a given revision of a wiki page for
-        editing.
+        editing or switches to the correct buffer if the is open already.
         """
 
         self.focus(2)
 
         if not self.buffers.has_key(wp):
 
-            if not self.lock(wp):
-                return
+            perm = int(self.xmlrpc.acl_check(wp))
 
-            self.buffers[wp]   = Buffer(wp, 'acwrite', True)
-            self.needs_refresh = True
+            if perm >= 1:
+                try:
+                    if rev:
+                        text = self.xmlrpc.page(wp, int(rev))
+                    else:
+                        text = self.xmlrpc.page(wp)
+                except StandardError, err:
+                    # FIXME better error handling
+                    print >>sys.stdout, err
 
-            try:
-                print >>sys.stdout, "Opening %s for editing ..." % wp
-                if rev:
-                    text = self.xmlrpc.page(wp, int(rev))
-                else:
-                    text = self.xmlrpc.page(wp)
+                if text: 
+                    if perm == 1:
+                        print >>sys.stderr, "You don't have permission to edit %s. Opening readonly!" % wp
+                        self.buffers[wp] = Buffer(wp, 'nowrite', True)
 
-                if text:
+                    if perm >= 2:
+                        if not self.lock(wp):
+                            # FIXME use exceptions
+                            return
+
+                        print >>sys.stdout, "Opening %s for editing ..." % wp
+                        self.buffers[wp] = Buffer(wp, 'acwrite', True)
+
                     lines = text.split("\n")
                     self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
-                else:
-                    print >>sys.stdout, 'Creating new page: %s' % wp
+
+                    vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                    vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                    vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
+
+                if not text and perm >= 4:
+                    print >>sys.stdout, "Creating new page: %s" % wp
+                    self.buffers[wp]   = Buffer(wp, 'acwrite', True)
+                    self.needs_refresh = True
+
+                    vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                    vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                    vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
 
                 vim.command('set encoding=utf-8')
                 vim.command('setlocal textwidth=0')
@@ -159,13 +178,9 @@ class DokuVimKi:
 
                 vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
 
-                vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
-
-            except StandardError, err:
-                # FIXME better error handling
-                print >>sys.stdout, err
+            else:
+                print >>sys.stderr, "You don't have permissions to read/edit/create %s" % wp
+                return
 
         else:
             self.needs_refresh = False
@@ -181,7 +196,9 @@ class DokuVimKi:
         
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if not self.buffers[wp].iswp: 
-            print >>sys.stdout, "Error: Current buffer %s is not a wiki page!" % wp
+            print >>sys.stderr, "Error: Current buffer %s is not a wiki page!" % wp
+        elif self.buffers[wp].type == 'nowrite':
+            print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
         else:
             text = "\n".join(self.buffers[wp].buf)
 
@@ -410,9 +427,10 @@ class DokuVimKi:
         if self.buffers[wp].iswp: 
             vim.command('bp!')
             vim.command('bdel! ' + self.buffers[wp].num)
+            if self.buffers[wp].type == 'acwrite':
+                # FIXME test for success?
+                self.unlock(wp)
             del self.buffers[wp]
-            # FIXME test for success?
-            self.unlock(wp)
         else:
             print >>sys.stderr, 'You cannot close special buffer "%s"!' % wp
 
@@ -635,6 +653,7 @@ class Buffer():
         self.buf  = vim.buffers[self.id]
         self.name = name
         self.iswp = iswp
+        self.type = type
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
         vim.command('abbr <buffer> <silent> close DWClose')
