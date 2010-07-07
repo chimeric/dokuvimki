@@ -19,17 +19,6 @@
 " URL:          http://www.chimeric.de/projects/dokuwiki/dokuvimki
 "-----------------------------------------------------------------------------
 
-" Command definitions
-command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')
-command! -nargs=? DWSave exec('py dokuvimki.save(<f-args>)')
-command! -nargs=? DWSearch exec('py dokuvimki.search(<f-args>)')
-command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')
-command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')
-command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')
-command! -nargs=0 DWClose exec('py dokuvimki.close()')
-command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')
-command! -nargs=0 DWHelp exec('py dokuvimki.help()')
-command! -nargs=0 DWQuit exec('py dokuvimki.quit()')
 command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
 python <<EOF
@@ -47,9 +36,8 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 
 # TODO
 # map :ls to own python function to only list open wiki pages without special buffers
-# global quit mapping
+# global quit mapping?
 # media stuff?
-# disable stuff if xmlrpc fails!
 # package that damned python module - update?
 # FIXME diffing?
 # ~/bin script for launching
@@ -74,27 +62,38 @@ class DokuVimKi:
         Instantiates special buffers, setup the xmlrpc connection and loads the
         page index and displays the recent changes of the last 7 days.
         """
+        if self.xmlrpc_init():
 
-        self.buffers = {}
-        self.buffers['search']    = Buffer('search', 'nofile')
-        self.buffers['backlinks'] = Buffer('backlinks', 'nofile')
-        self.buffers['revisions'] = Buffer('revisions', 'nofile')
-        self.buffers['changes']   = Buffer('changes', 'nofile')
-        self.buffers['index']     = Buffer('index', 'nofile')
-        self.buffers['help']      = Buffer('help', 'nofile')
+            vim.command("command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
+            vim.command("command! -nargs=? DWSave exec('py dokuvimki.save(<f-args>)')")
+            vim.command("command! -nargs=? DWSearch exec('py dokuvimki.search(<f-args>)')")
+            vim.command("command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')")
+            vim.command("command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')")
+            vim.command("command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')")
+            vim.command("command! -nargs=0 DWClose exec('py dokuvimki.close()')")
+            vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
+            vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
+            vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
 
-        self.needs_refresh = False
+            self.buffers = {}
+            self.buffers['search']    = Buffer('search', 'nofile')
+            self.buffers['backlinks'] = Buffer('backlinks', 'nofile')
+            self.buffers['revisions'] = Buffer('revisions', 'nofile')
+            self.buffers['changes']   = Buffer('changes', 'nofile')
+            self.buffers['index']     = Buffer('index', 'nofile')
+            self.buffers['help']      = Buffer('help', 'nofile')
 
-        self.cur_ns = ''
-        self.pages  = []
+            self.needs_refresh = False
 
-        self.dict = tempfile.NamedTemporaryFile(suffix='.dokuvimki')
-        vim.command('set dict+=' + self.dict.name)
+            self.cur_ns = ''
+            self.pages  = []
 
-        self.xmlrpc_init()
-        self.index(self.cur_ns, True)
-        vim.command('silent! 30vsplit')
-        self.changes()
+            self.dict = tempfile.NamedTemporaryFile(suffix='.dokuvimki')
+            vim.command('set dict+=' + self.dict.name)
+
+            self.index(self.cur_ns, True)
+            vim.command('silent! 30vsplit')
+            self.changes()
         
 
     def xmlrpc_init(self):
@@ -108,15 +107,15 @@ class DokuVimKi:
 
         try:
             import dokuwikixmlrpc
+            try:
+                self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
+                print >>sys.stdout, 'Connection to ' + vim.eval('g:DokuVimKi_URL') + ' established!'
+                return True
+            except dokuwikixmlrpc.DokuWikiXMLRPCError, msg:
+                print >>sys.stderr, msg
+                return False
         except ImportError:
-            print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing! Disabling all DokuVimKi commands!'
-            # FIXME disable all the shit
-
-        try:
-            self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
-            print >>sys.stdout, 'Connection to ' + vim.eval('g:DokuVimKi_URL') + ' established!'
-        except dokuwikixmlrpc.DokuWikiXMLRPCError, msg:
-            print >>sys.stderr, msg
+            print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
 
 
     def edit(self, wp, rev=''):
