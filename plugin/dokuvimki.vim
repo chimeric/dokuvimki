@@ -29,6 +29,7 @@ command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')
 command! -nargs=0 DWClose exec('py dokuvimki.close()')
 command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')
 command! -nargs=0 DWHelp exec('py dokuvimki.help()')
+command! -nargs=0 DWQuit exec('py dokuvimki.quit()')
 command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
 python <<EOF
@@ -81,6 +82,8 @@ class DokuVimKi:
         self.buffers['changes']   = Buffer('changes', 'nofile')
         self.buffers['index']     = Buffer('index', 'nofile')
         self.buffers['help']      = Buffer('help', 'nofile')
+
+        self.needs_refresh = False
 
         self.cur_ns = ''
         self.pages  = []
@@ -158,9 +161,9 @@ class DokuVimKi:
                         self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
                         vim.command('setlocal nomodified')
 
-                        vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                        vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                        vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
+                        vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save()')
+                        vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save()')
+                        vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save()')
 
                 if not text and perm >= 4:
                     print >>sys.stdout, "Creating new page: %s" % wp
@@ -169,9 +172,9 @@ class DokuVimKi:
 
                     vim.command('setlocal nomodified')
 
-                    vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                    vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                    vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
+                    vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save()')
+                    vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save()')
+                    vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save()')
 
                 vim.command('set encoding=utf-8')
                 vim.command('setlocal textwidth=0')
@@ -204,32 +207,35 @@ class DokuVimKi:
         elif self.buffers[wp].type == 'nowrite':
             print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
         else:
-            text = "\n".join(self.buffers[wp].buf)
+            if not self.ismodified():
+                print >>sys.stdout, "No unsaved changes in current buffer."
+            else:
+                text = "\n".join(self.buffers[wp].buf)
 
-            if not sum and text:
-                sum = 'xmlrpc edit'
-                minor = 1
+                if not sum and text:
+                    sum = 'xmlrpc edit'
+                    minor = 1
 
-            try:
-                self.xmlrpc.put_page(wp, text, sum, minor)
+                try:
+                    self.xmlrpc.put_page(wp, text, sum, minor)
 
-                if text:
-                    vim.command('silent! buffer! ' + self.buffers[wp].num)
-                    vim.command('set nomodified')
-                    print >>sys.stdout, 'Page %s written!' % wp
-                    if self.needs_refresh:
+                    if text:
+                        vim.command('silent! buffer! ' + self.buffers[wp].num)
+                        vim.command('set nomodified')
+                        print >>sys.stdout, 'Page %s written!' % wp
+                        if self.needs_refresh:
+                            self.index(self.cur_ns, True)
+                            self.needs_refresh = False
+                            self.focus(2)
+                    else:
+                        self.close()
                         self.index(self.cur_ns, True)
-                        self.needs_refresh = False
                         self.focus(2)
-                else:
-                    self.close()
-                    self.index(self.cur_ns, True)
-                    self.focus(2)
-                    print >>sys.stdout, 'Page %s removed!' % wp
+                        print >>sys.stdout, 'Page %s removed!' % wp
 
-            except StandardError, err:
-                # FIXME better error handling
-                print >>sys.stderr, 'DokuVimKi Error: %s' % err
+                except StandardError, err:
+                    # FIXME better error handling
+                    print >>sys.stderr, 'DokuVimKi Error: %s' % err
 
     
     def index(self, query='', refresh=False):
@@ -447,13 +453,7 @@ class DokuVimKi:
 
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if self.buffers[wp].iswp: 
-            vim.command('let g:stdout=""')
-            vim.command('redir => g:stdout')
-            vim.command('silent! set modified?')
-            vim.command('redir END')
-            modified = vim.eval('g:stdout').strip()
-
-            if not force and modified == 'modified':
+            if not force and self.ismodified():
                 print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWFClose." % wp
                 return
 
@@ -467,6 +467,23 @@ class DokuVimKi:
             print >>sys.stderr, 'You cannot close special buffer "%s"!' % wp
 
 
+    def ismodified(self):
+        """
+        Checks whether the current buffer is modified or not.
+        """
+
+        vim.command('let g:stdout=""')
+        vim.command('redir => g:stdout')
+        vim.command('silent! set modified?')
+        vim.command('redir END')
+        modified = vim.eval('g:stdout').strip()
+
+        if modified == 'modified':
+            return True
+        else:
+            return False
+        
+
     def help(self):
         """
         FIXME show help
@@ -474,6 +491,7 @@ class DokuVimKi:
 
         self.focus(2)
         vim.command('silent! buffer! ' + self.buffers['help'].num)
+        vim.command('silent! set buftype=help')
 
 
     def rev_edit(self):
@@ -689,6 +707,8 @@ class Buffer():
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
         vim.command('abbr <buffer> <silent> close DWClose')
+        vim.command('abbr <buffer> <silent> quit DWClose')
+        vim.command('abbr <buffer> <silent> q DWClose')
 
         if type == 'nofile':
             vim.command('setlocal nobuflisted')
