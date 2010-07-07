@@ -27,6 +27,7 @@ command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')
 command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')
 command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')
 command! -nargs=0 DWClose exec('py dokuvimki.close()')
+command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')
 command! -nargs=0 DWHelp exec('py dokuvimki.help()')
 command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
@@ -46,7 +47,6 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # TODO
 # map :ls to own python function to only list open wiki pages without special buffers
 # global quit mapping
-# FIXME check if a pages was modified but not send!!!
 # media stuff?
 # disable stuff if xmlrpc fails!
 # package that damned python module - update?
@@ -54,7 +54,6 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # ~/bin script for launching
 # re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
-# FIXME check if a page was modified but not send!!! remove the buffer! calls?
 # help
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
@@ -143,6 +142,10 @@ class DokuVimKi:
                     if perm == 1:
                         print >>sys.stderr, "You don't have permission to edit %s. Opening readonly!" % wp
                         self.buffers[wp] = Buffer(wp, 'nowrite', True)
+                        lines = text.split("\n")
+                        self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
+                        vim.command('setlocal nomodifiable')
+                        vim.command('setlocal readonly')
 
                     if perm >= 2:
                         if not self.lock(wp):
@@ -151,18 +154,20 @@ class DokuVimKi:
 
                         print >>sys.stdout, "Opening %s for editing ..." % wp
                         self.buffers[wp] = Buffer(wp, 'acwrite', True)
+                        lines = text.split("\n")
+                        self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
+                        vim.command('setlocal nomodified')
 
-                    lines = text.split("\n")
-                    self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
-
-                    vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                    vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
-                    vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
+                        vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                        vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
+                        vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save(<f-args>)')
 
                 if not text and perm >= 4:
                     print >>sys.stdout, "Creating new page: %s" % wp
                     self.buffers[wp]   = Buffer(wp, 'acwrite', True)
                     self.needs_refresh = True
+
+                    vim.command('setlocal nomodified')
 
                     vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save(<f-args>)')
                     vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save(<f-args>)')
@@ -335,12 +340,12 @@ class DokuVimKi:
         if not wp or wp[-1] == ':':
             return
 
-        self.focus(2)
-
-        vim.command('silent! buffer! ' + self.buffers['revisions'].num)
-        vim.command('setlocal modifiable')
-
         try:
+            self.focus(2)
+
+            vim.command('silent! buffer! ' + self.buffers['revisions'].num)
+            vim.command('setlocal modifiable')
+
             revs = self.xmlrpc.page_versions(wp, int(first))
             lines = []
             if len(revs) > 0:
@@ -351,7 +356,6 @@ class DokuVimKi:
                 self.buffers['revisions'].buf[:] = lines
                 print >>sys.stdout, "loaded revisions for :%s" % wp
                 vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
-                vim.command('setlocal nomodifiable')
 
                 vim.command('syn match DokuVimKi_REV_PAGE /^\(\w\|:\)*/')
                 vim.command('syn match DokuVimKi_REV_TS /\s\d*\s/')
@@ -360,6 +364,8 @@ class DokuVimKi:
                 vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow')
                 vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow')
                 vim.command('hi DokuVimKi_REV_CHANGE cterm=bold ctermfg=Yellow')
+
+                vim.command('setlocal nomodifiable')
 
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No revisions found for page: %s' % wp
@@ -376,21 +382,22 @@ class DokuVimKi:
         if not wp or wp[-1] == ':':
             return
 
-        self.focus(2)
-
-        vim.command('silent! buffer! ' + self.buffers['backlinks'].num)
-        vim.command('setlocal modifiable')
-
         try:
+            self.focus(2)
+
+            vim.command('silent! buffer! ' + self.buffers['backlinks'].num)
+            vim.command('setlocal modifiable')
+
             blinks = self.xmlrpc.backlinks(wp)
 
             if len(blinks) > 0:
                 for link in blinks:
                     self.buffers['backlinks'].buf[:] = map(str, blinks)
                 vim.command('map <buffer> <enter> :py dokuvimki.cmd("edit")<CR>')
-                vim.command('setlocal nomodifiable')
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No backlinks found for page: %s' % wp
+        
+            vim.command('setlocal nomodifiable')
 
         except DokuWikiXMLRPCError, err:
             print >>sys.stderr, 'DokuVimKi XML-RPC Error: %s' % err
@@ -406,8 +413,11 @@ class DokuVimKi:
         if refresh:
             self.refresh()
 
+
         try:
             vim.command('silent! buffer! ' + self.buffers['search'].num)
+            vim.command('setlocal modifiable')
+
             del self.buffers['search'].buf[:]
 
             if pattern:
@@ -421,11 +431,15 @@ class DokuVimKi:
                 vim.command('map <buffer> <enter> :py dokuvimki.cmd("edit")<CR>')
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No matching pages found!'
+
+            vim.command('setlocal nomodifiable')
+
         except:
             pass
-    
 
-    def close(self):
+
+    
+    def close(self, force=False):
         """
         Closes the current buffer. Works only if the current buffer is a wiki
         page.  The buffer is also removed from the buffer stack.
@@ -433,6 +447,16 @@ class DokuVimKi:
 
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if self.buffers[wp].iswp: 
+            vim.command('let g:stdout=""')
+            vim.command('redir => g:stdout')
+            vim.command('silent! set modified?')
+            vim.command('redir END')
+            modified = vim.eval('g:stdout').strip()
+
+            if not force and modified == 'modified':
+                print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWFClose." % wp
+                return
+
             vim.command('bp!')
             vim.command('bdel! ' + self.buffers[wp].num)
             if self.buffers[wp].type == 'acwrite':
@@ -665,6 +689,11 @@ class Buffer():
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
         vim.command('abbr <buffer> <silent> close DWClose')
+
+        if type == 'nofile':
+            vim.command('setlocal nobuflisted')
+            vim.command('setlocal nomodifiable')
+            vim.command('setlocal noswapfile')
 
 
 def dokuvimki():
