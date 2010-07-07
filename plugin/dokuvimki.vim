@@ -48,7 +48,7 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 # FIXME DWSaveAll
 # FIXME remove all locks on quit of all buffers in the pages list
-
+# what about namespace templates?
 
 class DokuVimKi:
     """
@@ -653,9 +653,8 @@ class DokuVimKi:
         row, col = vim.current.window.cursor
         line = vim.current.buffer[row-1]
 
-        # first line triggers nothing
-        if row == 1: 
-            print >>sys.stdout, "meh"
+        # first line triggers nothing in index buffer
+        if row == 1 and line.find('ns: ') != -1: 
             return
 
         if line.find('..') == -1:
