@@ -92,6 +92,12 @@ COMMANDS                                                  *dokuvimki-commands*
                             changes which haven't been synced back to the 
                             remote wiki.
 
+:DWQuit                     Quits the current session and quits vim. This will
+                            fail if there are unsaved changes.
+
+:DWFQuit                    Forces the current sesssion to quit, no matter if
+                            there are unsaved changes.
+
 :DWHelp                     Displays the DokuVimKi help.
 
 ------------------------------------------------------------------------------

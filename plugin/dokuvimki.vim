@@ -36,18 +36,15 @@ sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
 
 # TODO
 # map :ls to own python function to only list open wiki pages without special buffers
-# global quit mapping?
 # media stuff?
 # package that damned python module - update?
 # FIXME diffing?
 # ~/bin script for launching
 # re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
-# help
+# FIXME help
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
-# FIXME DWSaveAll
-# FIXME remove all locks on quit of all buffers in the pages list
 # what about namespace templates?
 
 class DokuVimKi:
@@ -74,6 +71,7 @@ class DokuVimKi:
             vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
             vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
             vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
+            vim.command("command! -nargs=0 DWFQuit exec('py dokuvimki.quit(True)')")
 
             self.buffers = {}
             self.buffers['search']    = Buffer('search', 'nofile')
@@ -466,10 +464,40 @@ class DokuVimKi:
             print >>sys.stderr, 'You cannot close special buffer "%s"!' % wp
 
 
-    def ismodified(self):
+    def quit(self, force=False):
         """
-        Checks whether the current buffer is modified or not.
+        Quits the current session. 
         """
+
+        for buffer in self.buffers.keys():
+            if self.buffers[buffer].iswp:
+                vim.command('silent! buffer! ' + self.buffers[buffer].num)
+                if not self.ismodified(buffer):
+                    self.close()
+                elif self.ismodified(buffer) and force:
+                    self.close(True)
+
+        vim.command('silent! quitall')
+
+
+    def help(self):
+        """
+        FIXME show help
+        """
+
+        self.focus(2)
+        vim.command('silent! buffer! ' + self.buffers['help'].num)
+        vim.command('silent! set buftype=help')
+        # FIXME setup help
+
+
+    def ismodified(self, wp=False):
+        """
+        Checks whether the current buffer or a given buffer is modified or not.
+        """
+
+        if wp:
+            vim.command('silent! buffer! ' + self.buffers[wp].num)
 
         vim.command('let g:stdout=""')
         vim.command('redir => g:stdout')
@@ -482,16 +510,6 @@ class DokuVimKi:
         else:
             return False
         
-
-    def help(self):
-        """
-        FIXME show help
-        """
-
-        self.focus(2)
-        vim.command('silent! buffer! ' + self.buffers['help'].num)
-        vim.command('silent! set buftype=help')
-
 
     def rev_edit(self):
         """
