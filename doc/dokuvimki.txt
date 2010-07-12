@@ -26,7 +26,7 @@ UPDATES                                                    *dokuvimki-updates*
 The official releases can be found at:
 
     www: http://chimeric.de/projects/dokuwiki/dokuvimki
-    git: FIXME
+    git: http://github.com/chimeric/dokuvimki
 
 ------------------------------------------------------------------------------
 INSTALLATION                                          *dokuvimki-installation*
@@ -49,13 +49,8 @@ g:DokuVimKi_PASS            The password used to login into the remote wiki.
 
 g:DokuVimKi_URL             The URL of the remote wiki (no trailing slash!).
 
-g:DokuVimKi_TREEWIDTH       The width of the page tree window (default 35).
-
 g:DokuVimKi_AUTOCONNECT     Set to "yes" to establish a XML-RPC connection to
                             your remote wiki whenever you start vim.
-
-g:DokuVimKi_FOLDCOLWIDTH    Defines the width of the fold colums (default 3)
-                            see :help foldcolumn for more information.
 
 ------------------------------------------------------------------------------
 COMMANDS                                                  *dokuvimki-commands*
@@ -64,7 +59,7 @@ COMMANDS                                                  *dokuvimki-commands*
                             the page does not exist on the remote wiki it will
                             be created once you issue :DWSend.
 
-:DWSend <summary>           Sends the wiki page in the edit buffer to remote
+:DWSave <summary>           Save the wiki page in the edit buffer to remote
                             wiki. If no edit summary is given it will be
                             saved as minor edit.
 
@@ -81,10 +76,23 @@ COMMANDS                                                  *dokuvimki-commands*
                             By hitting <Enter> the revision under the cursor 
                             is loaded into the edit buffer.
 
-:DWAuth                     Use this function if you want to re-authenticate
-                            to a different remote wiki than specified in your 
-                            .vimrc while editing. Simplechange the values of 
-                            the configuration and issue :DWAuth.
+:DWSearch <search-string>   Searches for matching pages. You can use regular
+                            expressions!
+
+:DWChanges                  Lists the recent changes of the remote wiki.
+
+:DWClose                    Closes the current edit buffer (removing edit 
+                            locks on the remote wiki etc.) - if the buffer
+                            contains changes which haven't been synced back
+                            to the remote wiki this command will issue a
+                            warning.  You can also use :close which is setup
+                            as abbreviation.
+
+:DWFClose                   Closes the current edit buffer even if it contains
+                            changes which haven't been synced back to the 
+                            remote wiki.
+
+:DWHelp                     Displays the DokuVimKi help.
 
 ------------------------------------------------------------------------------
 EDIT-MAPPINGS                                        *dokuvimki-edit-mappings*
@@ -121,12 +129,25 @@ only in insert mode.
 ------------------------------------------------------------------------------
 INDEX-MAPPINGS                                      *dokuvimki-index-mappings*
 
+DokuVimKi comes with some specials mappings you can use in the index window
+on the right. Namespaces (folders) are indicated by havinga different color
+than pages (you can change the colors if you want see |dokuvimki-colors|).
+
+    <ENTER>     Opens the page for editing, or lists the contents of the
+                namespace under the cursor.
+
+    b           Shows a list of the page linking back to the page under the
+                cursor.
+
+    r           Shows the revisions of page under the cursor.
+
 ------------------------------------------------------------------------------
 BUGS                                                          *dokuvimki-bugs*
 
-Please send any comments for improvements or bug-reports to:
+Please use the official bug tracker for feature requests of bug reports:
 >
-    chi@chimeric.de
+    http://github.com/chimeric/dokuvimki/issus
+    
 
 If the bug is reproducible, then it will be of great help if a short
 description of the events leading to the bug are also given ;-).
