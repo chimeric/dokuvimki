@@ -195,40 +195,43 @@ class DokuVimKi:
         """
         
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
-        if not self.buffers[wp].iswp: 
-            print >>sys.stderr, "Error: Current buffer %s is not a wiki page!" % wp
-        elif self.buffers[wp].type == 'nowrite':
-            print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
-        else:
-            if not self.ismodified():
-                print >>sys.stdout, "No unsaved changes in current buffer."
+        try:
+            if not self.buffers[wp].iswp: 
+                print >>sys.stderr, "Error: Current buffer %s is not a wiki page!" % wp
+            elif self.buffers[wp].type == 'nowrite':
+                print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
             else:
-                text = "\n".join(self.buffers[wp].buf)
+                if not self.ismodified():
+                    print >>sys.stdout, "No unsaved changes in current buffer."
+                else:
+                    text = "\n".join(self.buffers[wp].buf)
 
-                if not sum and text:
-                    sum = 'xmlrpc edit'
-                    minor = 1
+                    if not sum and text:
+                        sum = 'xmlrpc edit'
+                        minor = 1
 
-                try:
-                    self.xmlrpc.put_page(wp, text, sum, minor)
+                    try:
+                        self.xmlrpc.put_page(wp, text, sum, minor)
 
-                    if text:
-                        vim.command('silent! buffer! ' + self.buffers[wp].num)
-                        vim.command('set nomodified')
-                        print >>sys.stdout, 'Page %s written!' % wp
-                        if self.needs_refresh:
+                        if text:
+                            vim.command('silent! buffer! ' + self.buffers[wp].num)
+                            vim.command('set nomodified')
+                            print >>sys.stdout, 'Page %s written!' % wp
+                            if self.needs_refresh:
+                                self.index(self.cur_ns, True)
+                                self.needs_refresh = False
+                                self.focus(2)
+                        else:
+                            self.close()
                             self.index(self.cur_ns, True)
-                            self.needs_refresh = False
                             self.focus(2)
-                    else:
-                        self.close()
-                        self.index(self.cur_ns, True)
-                        self.focus(2)
-                        print >>sys.stdout, 'Page %s removed!' % wp
+                            print >>sys.stdout, 'Page %s removed!' % wp
 
-                except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
-                    # FIXME better error handling
-                    print >>sys.stderr, 'DokuVimKi Error: %s' % err
+                    except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
+                        # FIXME better error handling
+                        print >>sys.stderr, 'DokuVimKi Error: %s' % err
+        except KeyError, err:
+            print >>sys.stderr, "Error: Current buffer %s is not handled by DWSave!" % wp
 
     
     def index(self, query='', refresh=False):
