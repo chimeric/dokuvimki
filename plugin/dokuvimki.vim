@@ -94,7 +94,7 @@ class DokuVimKi:
 
             self.index(self.cur_ns, True)
             vim.command('silent! 30vsplit')
-            self.changes()
+            self.help()
         
 
     def xmlrpc_init(self):
@@ -301,6 +301,7 @@ class DokuVimKi:
         vim.command('map <silent> <buffer> b :py dokuvimki.cmd("backlinks")<CR>')
 
         vim.command('setlocal nomodifiable')
+        vim.command('2')
 
 
     def changes(self, timestamp=False):
