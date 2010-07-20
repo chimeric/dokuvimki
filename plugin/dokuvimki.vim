@@ -40,11 +40,8 @@ except ImportError:
     sys.exit(1)
 
 # TODO
-# media stuff?
 # FIXME diffing?
-# re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
-# FIXME help
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 
@@ -492,7 +489,7 @@ class DokuVimKi:
 
     def help(self):
         """
-        FIXME show help
+        Shows the plugin help.
         """
 
         self.focus(2)
