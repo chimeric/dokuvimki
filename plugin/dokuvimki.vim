@@ -32,20 +32,21 @@ import re
 import vim
 import time
 import tempfile
-sys.path.append('/home/chi/.vim/plugin/dokuwikixmlrpc')
+
+try:
+    import dokuwikixmlrpc
+except ImportError:
+    print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
+    sys.exit(1)
 
 # TODO
-# map :ls to own python function to only list open wiki pages without special buffers
 # media stuff?
-# package that damned python module - update?
 # FIXME diffing?
-# ~/bin script for launching
 # re-auth to another wiki (parallel sessions?)
 # improve dictionary lookup (needs autocomplete function)
 # FIXME help
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
-# what about namespace templates?
 
 class DokuVimKi:
     """
@@ -63,7 +64,8 @@ class DokuVimKi:
 
             vim.command("command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
             vim.command("command! -nargs=? DWSave exec('py dokuvimki.save(<f-args>)')")
-            vim.command("command! -nargs=? DWSearch exec('py dokuvimki.search(<f-args>)')")
+            vim.command("command! -nargs=? DWSearch exec('py dokuvimki.search(\"page\", <f-args>)')")
+            vim.command("command! -nargs=? DWMediaSearch exec('py dokuvimki.search(\"media\", <f-args>)')")
             vim.command("command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')")
             vim.command("command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')")
             vim.command("command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')")
@@ -79,6 +81,7 @@ class DokuVimKi:
             self.buffers['revisions'] = Buffer('revisions', 'nofile')
             self.buffers['changes']   = Buffer('changes', 'nofile')
             self.buffers['index']     = Buffer('index', 'nofile')
+            self.buffers['media']     = Buffer('media', 'nofile')
             self.buffers['help']      = Buffer('help', 'nofile')
 
             self.needs_refresh = False
@@ -104,16 +107,12 @@ class DokuVimKi:
         self.dw_url  = vim.eval('g:DokuVimKi_URL')
 
         try:
-            import dokuwikixmlrpc
-            try:
-                self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
-                print >>sys.stdout, 'Connection to ' + vim.eval('g:DokuVimKi_URL') + ' established!'
-                return True
-            except dokuwikixmlrpc.DokuWikiXMLRPCError, msg:
-                print >>sys.stderr, msg
-                return False
-        except ImportError:
-            print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
+            self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
+            print >>sys.stdout, 'Connection to ' + vim.eval('g:DokuVimKi_URL') + ' established!'
+            return True
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, msg:
+            print >>sys.stderr, msg
+            return False
 
 
     def edit(self, wp, rev=''):
@@ -134,7 +133,7 @@ class DokuVimKi:
                         text = self.xmlrpc.page(wp, int(rev))
                     else:
                         text = self.xmlrpc.page(wp)
-                except StandardError, err:
+                except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
                     # FIXME better error handling
                     print >>sys.stdout, err
 
@@ -230,7 +229,7 @@ class DokuVimKi:
                         self.focus(2)
                         print >>sys.stdout, 'Page %s removed!' % wp
 
-                except StandardError, err:
+                except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
                     # FIXME better error handling
                     print >>sys.stderr, 'DokuVimKi Error: %s' % err
 
@@ -331,7 +330,7 @@ class DokuVimKi:
                 vim.command('setlocal nomodifiable')
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No changes'
-        except StandardError, err:
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
             print >>sys.stderr, err
 
 
@@ -373,7 +372,7 @@ class DokuVimKi:
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No revisions found for page: %s' % wp
 
-        except StandardError, err:
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
             print >>sys.stderr, 'DokuVimKi XML-RPC Error: %s' % err
 
 
@@ -402,38 +401,48 @@ class DokuVimKi:
         
             vim.command('setlocal nomodifiable')
 
-        except DokuWikiXMLRPCError, err:
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
             print >>sys.stderr, 'DokuVimKi XML-RPC Error: %s' % err
 
 
-    def search(self, pattern='', refresh=False):
+    def search(self, type='', pattern=''):
         """
         Search the page list for matching pages and display them for editing.
         """
 
         self.focus(2)
 
-        if refresh:
-            self.refresh()
-
-
         try:
-            vim.command('silent! buffer! ' + self.buffers['search'].num)
-            vim.command('setlocal modifiable')
+            if type == 'page':
+                vim.command('silent! buffer! ' + self.buffers['search'].num)
+                vim.command('setlocal modifiable')
 
-            del self.buffers['search'].buf[:]
+                if pattern:
+                    p = re.compile(pattern)
+                    result = filter(p.search, self.pages)
+                else:
+                    result = self.pages
 
-            if pattern:
-                p = re.compile(pattern)
-                result = filter(p.search, self.pages)
-            else:
-                result = self.pages
+                if len(result) > 0:
+                    self.buffers['search'].buf[:] = result
+                    vim.command('map <buffer> <enter> :py dokuvimki.cmd("edit")<CR>')
+                else:
+                    print >>sys.stderr, 'DokuVimKi Error: No matching pages found!'
 
-            if len(result) > 0:
-                self.buffers['search'].buf[:] = result
-                vim.command('map <buffer> <enter> :py dokuvimki.cmd("edit")<CR>')
-            else:
-                print >>sys.stderr, 'DokuVimKi Error: No matching pages found!'
+            elif type == 'media':
+                vim.command('silent! buffer! ' + self.buffers['media'].num)
+                vim.command('setlocal modifiable')
+
+                if pattern:
+                    p = re.compile(pattern)
+                    result = filter(p.search, self.media)
+                else:
+                    result = self.media
+
+                if len(result) > 0:
+                    self.buffers['media'].buf[:] = result
+                else:
+                    print >>sys.stderr, 'DokuVimKi Error: No matching media files found!'
 
             vim.command('setlocal nomodifiable')
 
@@ -549,6 +558,13 @@ class DokuVimKi:
         self.dict.seek(0)
         self.dict.write("\n".join(self.pages))
 
+        print >>sys.stdout, "Refreshing media index!"
+        data = self.xmlrpc.list_files(':', True)
+        self.media = []
+        if data:
+            for media in data:
+                self.media.append(media['id'].encode('utf-8'))
+
 
     def lock(self, wp):
         """
@@ -593,7 +609,7 @@ class DokuVimKi:
 
         try:
             return self.xmlrpc.set_locks(locks)
-        except StandardError, err:
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
             # FIXME error handling
             print >>sys.stderr, err
 
