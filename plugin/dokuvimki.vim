@@ -498,7 +498,10 @@ class DokuVimKi:
         self.focus(2)
         vim.command('silent! buffer! ' + self.buffers['help'].num)
         vim.command('silent! set buftype=help')
-        # FIXME setup help
+
+        # generate help tags just in case 
+        vim.command('helptags ~/.vim/doc')
+        vim.command('help dokuvimki')
 
 
     def ismodified(self, wp=False):
