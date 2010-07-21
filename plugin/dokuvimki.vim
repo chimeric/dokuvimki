@@ -40,7 +40,6 @@ except ImportError:
     sys.exit(1)
 
 # TODO
-# FIXME diffing?
 # improve dictionary lookup (needs autocomplete function)
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
@@ -82,6 +81,7 @@ class DokuVimKi:
             self.buffers['help']      = Buffer('help', 'nofile')
 
             self.needs_refresh = False
+            self.diffmode      = False
 
             self.cur_ns = ''
             self.pages  = []
@@ -117,6 +117,9 @@ class DokuVimKi:
         Opens a given wiki page, or a given revision of a wiki page for
         editing or switches to the correct buffer if the is open already.
         """
+
+        if self.diffmode:
+            self.diff_close()
 
         self.focus(2)
 
@@ -179,6 +182,57 @@ class DokuVimKi:
             vim.command('silent! buffer! ' + self.buffers[wp].num)
 
 
+    def diff(self, revline):
+        """
+        Opens a page and a given revision in diff mode.
+        """
+
+        data = revline.split()
+        wp   = data[0]
+        date = data[1]
+        rev  = data[2]
+
+        if not self.buffers.has_key(wp):
+            print >>sys.stdout, "meh"
+            self.edit(wp)
+
+        if not self.buffers[wp].diff.has_key(rev):
+            text = self.xmlrpc.page(wp, int(rev))
+            if text:
+                self.buffers[wp].diff[rev] = Buffer(wp + '-' + date, 'nofile')
+                lines = text.split("\n")
+                self.buffers[wp].diff[rev].page[:] = map(lambda x: x.encode('utf-8'), lines)
+            else:
+                print >>sys.stdout, "Error, couldn't load revision for diffing."
+                return
+
+        self.focus(2)
+        vim.command('silent! buffer! ' + self.buffers[wp].num)
+        vim.command('vertical diffsplit')
+        self.focus(3)
+        vim.command('silent! buffer! ' + self.buffers[wp].diff[rev].num)
+        vim.command('setlocal modifiable')
+        self.buffers[wp].diff[rev].buf[:]  = self.buffers[wp].diff[rev].page
+        vim.command('setlocal nomodifiable')
+        self.buffer_setup()
+        vim.command('diffthis')
+        self.focus(2)
+        self.diffmode = True
+
+
+    def diff_close(self):
+        """
+        Closes the diff window.
+        """
+
+        self.focus(3)
+        vim.command('diffoff')
+        vim.command('close')
+        self.diffmode = False
+        self.focus(2)
+        vim.command('vertical resize')
+
+
     def save(self, sum='', minor=0):
         """
         Saves the current buffer. Works only if the buffer is a wiki page.
@@ -189,7 +243,7 @@ class DokuVimKi:
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         try:
             if not self.buffers[wp].iswp: 
-                print >>sys.stderr, "Error: Current buffer %s is not a wiki page!" % wp
+                print >>sys.stderr, "Error: Current buffer %s is not a wiki page or not writeable!" % wp
             elif self.buffers[wp].type == 'nowrite':
                 print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
             else:
@@ -237,6 +291,8 @@ class DokuVimKi:
         dirs  = []
 
         self.focus(1)
+        vim.command('set winwidth=30')
+        vim.command('set winminwidth=30')
 
         vim.command('silent! buffer! ' + self.buffers['index'].num)
         vim.command('setlocal modifiable')
@@ -302,6 +358,9 @@ class DokuVimKi:
         Shows the last changes on the remote wiki.
         """
         
+        if self.diffmode:
+            self.diff_close()
+
         self.focus(2)
 
         vim.command('silent! buffer! ' + self.buffers['changes'].num)
@@ -333,6 +392,9 @@ class DokuVimKi:
         Display revisions for a certain page if any.
         """
 
+        if self.diffmode:
+            self.diff_close()
+
         if not wp or wp[-1] == ':':
             return
 
@@ -362,6 +424,7 @@ class DokuVimKi:
                 vim.command('hi DokuVimKi_REV_CHANGE cterm=bold ctermfg=Yellow')
 
                 vim.command('setlocal nomodifiable')
+                vim.command('map <silent> <buffer> d :py dokuvimki.cmd("diff")<CR>')
 
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No revisions found for page: %s' % wp
@@ -374,6 +437,9 @@ class DokuVimKi:
         """
         Display backlinks for a certain page if any.
         """
+
+        if self.diffmode:
+            self.diff_close()
 
         if not wp or wp[-1] == ':':
             return
@@ -403,6 +469,9 @@ class DokuVimKi:
         """
         Search the page list for matching pages and display them for editing.
         """
+
+        if self.diffmode:
+            self.diff_close()
 
         self.focus(2)
 
@@ -491,6 +560,9 @@ class DokuVimKi:
         """
         Shows the plugin help.
         """
+
+        if self.diffmode:
+            self.diff_close()
 
         self.focus(2)
         vim.command('silent! buffer! ' + self.buffers['help'].num)
@@ -700,16 +772,19 @@ class DokuVimKi:
 
 
     def buffer_enter(self, wp):
-        print >>sys.stdout, "enter %s" % wp
+        """
+        Loads the buffer on enter.
+        """
+
         self.buffers[wp].buf[:] = self.buffers[wp].page
         vim.command('setlocal nomodified')
         self.buffer_setup()
-        if self.buffers[wp].modified:
-            print >>sys.stdout, "%s modified" % wp
 
 
     def buffer_leave(self, wp):
-        print >>sys.stdout, "leave %s" % wp
+        """
+        Checks if a buffer was modified when left.
+        """
 
         vim.command('let g:stdout=""')
         vim.command('redir => g:stdout')
@@ -719,13 +794,16 @@ class DokuVimKi:
 
         if modified == 'modified':
             self.buffers[wp].modified = True
-            print >>sys.stdout, "%s modified" % wp
 
         self.buffers[wp].page[:] = self.buffers[wp].buf
         vim.command('set nomodified')
 
    
     def buffer_setup(self):
+        """
+        Setup edit environment.
+        """
+
         vim.command('setlocal textwidth=0')
         vim.command('setlocal wrap')
         vim.command('setlocal linebreak')
@@ -762,6 +840,7 @@ class Buffer():
         self.name = name
         self.iswp = iswp
         self.type = type
+        self.page = []
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
         vim.command('abbr <buffer> <silent> close DWClose')
@@ -774,10 +853,11 @@ class Buffer():
             vim.command('setlocal noswapfile')
 
         if type == 'acwrite':
-            self.page = []
+            self.diff = {}
             self.modified = False
             vim.command('autocmd! BufEnter <buffer> py dokuvimki.buffer_enter("' + self.name + '")')
             vim.command('autocmd! BufLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
+            vim.command('autocmd! InsertLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
             vim.command('set encoding=utf-8')
 
 
