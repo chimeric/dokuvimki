@@ -854,13 +854,6 @@ class DokuVimKi:
         vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
 
 
-    def complete(self, base, findstart):
-        if findstart:
-            pass
-        else:
-            return " ".join(self.pages)
-
-
 
 class Buffer():
     """
