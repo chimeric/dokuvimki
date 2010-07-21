@@ -107,8 +107,11 @@ class DokuVimKi:
             self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
             print >>sys.stdout, 'Connection to ' + vim.eval('g:DokuVimKi_URL') + ' established!'
             return True
-        except dokuwikixmlrpc.DokuWikiXMLRPCError, msg:
-            print >>sys.stderr, msg
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
+            print >>sys.stderr, err
+            return False
+        except dokuwikixmlrpc.DokuWikiURLError, err:
+            print >>sys.stderr, err
             return False
 
 
