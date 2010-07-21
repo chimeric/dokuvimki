@@ -131,7 +131,6 @@ class DokuVimKi:
                     else:
                         text = self.xmlrpc.page(wp)
                 except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
-                    # FIXME better error handling
                     print >>sys.stdout, err
 
                 if text: 
@@ -151,9 +150,10 @@ class DokuVimKi:
                         print >>sys.stdout, "Opening %s for editing ..." % wp
                         self.buffers[wp] = Buffer(wp, 'acwrite', True)
                         lines = text.split("\n")
-                        self.buffers[wp].buf[:] = map(lambda x: x.encode('utf-8'), lines)
-                        vim.command('setlocal nomodified')
+                        self.buffers[wp].page[:] = map(lambda x: x.encode('utf-8'), lines)
+                        self.buffers[wp].buf[:]  = self.buffers[wp].page
 
+                        vim.command('set nomodified')
                         vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save()')
                         vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save()')
                         vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save()')
@@ -163,20 +163,12 @@ class DokuVimKi:
                     self.buffers[wp]   = Buffer(wp, 'acwrite', True)
                     self.needs_refresh = True
 
-                    vim.command('setlocal nomodified')
-
+                    vim.command('set nomodified')
                     vim.command('autocmd! BufWriteCmd <buffer> py dokuvimki.save()')
                     vim.command('autocmd! FileWriteCmd <buffer> py dokuvimki.save()')
                     vim.command('autocmd! FileAppendCmd <buffer> py dokuvimki.save()')
-
-                vim.command('set encoding=utf-8')
-                vim.command('setlocal textwidth=0')
-                vim.command('setlocal wrap')
-                vim.command('setlocal linebreak')
-                vim.command('setlocal syntax=dokuwiki')
-                vim.command('setlocal filetype=dokuwiki')
-
-                vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
+        
+                self.buffer_setup()
 
             else:
                 print >>sys.stderr, "You don't have permissions to read/edit/create %s" % wp
@@ -201,7 +193,7 @@ class DokuVimKi:
             elif self.buffers[wp].type == 'nowrite':
                 print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
             else:
-                if not self.ismodified():
+                if not self.ismodified(wp):
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 else:
                     text = "\n".join(self.buffers[wp].buf)
@@ -216,7 +208,9 @@ class DokuVimKi:
                         if text:
                             vim.command('silent! buffer! ' + self.buffers[wp].num)
                             vim.command('set nomodified')
+                            self.buffers[wp].modified = False
                             print >>sys.stdout, 'Page %s written!' % wp
+
                             if self.needs_refresh:
                                 self.index(self.cur_ns, True)
                                 self.needs_refresh = False
@@ -228,7 +222,6 @@ class DokuVimKi:
                             print >>sys.stdout, 'Page %s removed!' % wp
 
                     except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
-                        # FIXME better error handling
                         print >>sys.stderr, 'DokuVimKi Error: %s' % err
         except KeyError, err:
             print >>sys.stderr, "Error: Current buffer %s is not handled by DWSave!" % wp
@@ -460,7 +453,7 @@ class DokuVimKi:
 
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if self.buffers[wp].iswp: 
-            if not force and self.ismodified():
+            if not force and self.ismodified(wp):
                 print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWFClose." % wp
                 return
 
@@ -479,15 +472,19 @@ class DokuVimKi:
         Quits the current session. 
         """
 
+        unsaved = []
+
         for buffer in self.buffers.keys():
             if self.buffers[buffer].iswp:
-                vim.command('silent! buffer! ' + self.buffers[buffer].num)
-                if not self.ismodified(buffer):
+                if not self.buffers[buffer].modified:
                     self.close()
-                elif self.ismodified(buffer) and force:
+                elif self.buffers[buffer].modified and force:
                     self.close(True)
+                else:
+                    unsaved.append(buffer)
 
-        vim.command('silent! quitall')
+        if len(unsaved) == 0:
+            vim.command('silent! quitall')
 
 
     def help(self):
@@ -504,21 +501,12 @@ class DokuVimKi:
         vim.command('help dokuvimki')
 
 
-    def ismodified(self, wp=False):
+    def ismodified(self, wp):
         """
         Checks whether the current buffer or a given buffer is modified or not.
         """
 
-        if wp:
-            vim.command('silent! buffer! ' + self.buffers[wp].num)
-
-        vim.command('let g:stdout=""')
-        vim.command('redir => g:stdout')
-        vim.command('silent! set modified?')
-        vim.command('redir END')
-        modified = vim.eval('g:stdout').strip()
-
-        if modified == 'modified':
+        if self.buffers[wp].modified:
             return True
         else:
             return False
@@ -614,7 +602,6 @@ class DokuVimKi:
         try:
             return self.xmlrpc.set_locks(locks)
         except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
-            # FIXME error handling
             print >>sys.stderr, err
 
 
@@ -712,6 +699,41 @@ class DokuVimKi:
         callback(line)
 
 
+    def buffer_enter(self, wp):
+        print >>sys.stdout, "enter %s" % wp
+        self.buffers[wp].buf[:] = self.buffers[wp].page
+        vim.command('setlocal nomodified')
+        self.buffer_setup()
+        if self.buffers[wp].modified:
+            print >>sys.stdout, "%s modified" % wp
+
+
+    def buffer_leave(self, wp):
+        print >>sys.stdout, "leave %s" % wp
+
+        vim.command('let g:stdout=""')
+        vim.command('redir => g:stdout')
+        vim.command('silent! set modified?')
+        vim.command('redir END')
+        modified = vim.eval('g:stdout').strip()
+
+        if modified == 'modified':
+            self.buffers[wp].modified = True
+            print >>sys.stdout, "%s modified" % wp
+
+        self.buffers[wp].page[:] = self.buffers[wp].buf
+        vim.command('set nomodified')
+
+   
+    def buffer_setup(self):
+        vim.command('setlocal textwidth=0')
+        vim.command('setlocal wrap')
+        vim.command('setlocal linebreak')
+        vim.command('setlocal syntax=dokuwiki')
+        vim.command('setlocal filetype=dokuwiki')
+        vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
+
+
 class Buffer():
     """
     Representates a vim buffer object. Used to manage keep track of all opened
@@ -750,6 +772,14 @@ class Buffer():
             vim.command('setlocal nobuflisted')
             vim.command('setlocal nomodifiable')
             vim.command('setlocal noswapfile')
+
+        if type == 'acwrite':
+            self.page = []
+            self.modified = False
+            vim.command('autocmd! BufEnter <buffer> py dokuvimki.buffer_enter("' + self.name + '")')
+            vim.command('autocmd! BufLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
+            vim.command('set encoding=utf-8')
+
 
 
 def dokuvimki():
