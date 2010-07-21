@@ -21,6 +21,47 @@
 
 command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
+" Custom autocompletion function for wiki pages and media files
+" the global g:pages g:media variables are set/refreshed 
+" when the index is loaded
+fun! CompleteLinks(findstart, base)
+    if a:findstart
+	    " locate the start of the page/media link
+	    let line = getline('.')
+	    let start = col('.') - 1
+	    while start > 0 && line[start - 1] !~ '\([\|{\)'
+	      let start -= 1
+	    endwhile
+        if line[start - 1] =~ "["
+          let g:comp = "pages"
+        elseif line[start - 1] =~ "{"
+          let g:comp = "media"
+        endif
+	    return start
+    else
+        " find matching pages/media
+	    let res = []
+        if g:comp =~ "pages"
+          echo "pages"
+          for m in split(g:pages)
+            if m =~ '^' . a:base
+          call add(res, m)
+            endif
+          endfor
+        elseif g:comp =~ "media"
+          echo "media"
+          for m in split(g:media)
+            if m =~ '^' . a:base
+          call add(res, m)
+            endif
+          endfor
+        endif
+	    return res
+    endif
+endfun
+set completefunc=CompleteLinks
+set omnifunc=CompleteLinks
+
 python <<EOF
 # -*- coding: utf-8 -*-
 
@@ -31,7 +72,6 @@ import sys
 import re
 import vim
 import time
-import tempfile
 
 try:
     import dokuwikixmlrpc
@@ -40,7 +80,6 @@ except ImportError:
     sys.exit(1)
 
 # TODO
-# improve dictionary lookup (needs autocomplete function)
 # test id_lookup()
 # FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 
@@ -85,9 +124,6 @@ class DokuVimKi:
 
             self.cur_ns = ''
             self.pages  = []
-
-            self.dict = tempfile.NamedTemporaryFile(suffix='.dokuvimki')
-            vim.command('set dict+=' + self.dict.name)
 
             self.index(self.cur_ns, True)
             vim.command('silent! 30vsplit')
@@ -622,15 +658,18 @@ class DokuVimKi:
                 self.pages.append(page['id'].encode('utf-8'))
 
         self.pages.sort()
-        self.dict.seek(0)
-        self.dict.write("\n".join(self.pages))
+        vim.command('let g:pages = "' + " ".join(self.pages) + '"')
 
         print >>sys.stdout, "Refreshing media index!"
         data = self.xmlrpc.list_files(':', True)
         self.media = []
+
         if data:
             for media in data:
                 self.media.append(media['id'].encode('utf-8'))
+
+        self.media.sort()
+        vim.command('let g:media = "' + " ".join(self.media) + '"')
 
 
     def lock(self, wp):
@@ -813,6 +852,14 @@ class DokuVimKi:
         vim.command('setlocal syntax=dokuwiki')
         vim.command('setlocal filetype=dokuwiki')
         vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
+
+
+    def complete(self, base, findstart):
+        if findstart:
+            pass
+        else:
+            return " ".join(self.pages)
+
 
 
 class Buffer():
