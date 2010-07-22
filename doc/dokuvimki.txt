@@ -25,7 +25,6 @@ UPDATES                                                    *dokuvimki-updates*
 
 The official releases can be found at:
 
-    www: http://chimeric.de/projects/dokuwiki/dokuvimki
     git: http://github.com/chimeric/dokuvimki
 
 ------------------------------------------------------------------------------
@@ -57,11 +56,11 @@ COMMANDS                                                  *dokuvimki-commands*
 
 :DWEdit <page>              Opens the given wiki page in the edit buffer. If
                             the page does not exist on the remote wiki it will
-                            be created once you issue :DWSend.
+                            be created once you issue :DWSave.
 
-:DWSave <summary>           Save the wiki page in the edit buffer to remote
-                            wiki. If no edit summary is given it will be
-                            saved as minor edit.
+:DWSave <summary>           Save the wiki page in the edit buffer to the
+                            remote wiki. If no edit summary is given it 
+                            will be saved as minor edit.
 
 :DWBackLinks <page>         Loads a list of pages which link back to the given
                             wiki page into the edit buffer. If you are already
@@ -76,8 +75,11 @@ COMMANDS                                                  *dokuvimki-commands*
                             By hitting <Enter> the revision under the cursor 
                             is loaded into the edit buffer.
 
-:DWSearch <search-string>   Searches for matching pages. You can use regular
+:DWSearch <pattern>         Searches for matching pages. You can use regular
                             expressions!
+
+:DWMediaSearch <pattern>    Searches for matching media files. You can use
+                            regular expressions.
 
 :DWChanges                  Lists the recent changes of the remote wiki.
 
@@ -107,29 +109,7 @@ DokuVimKi mimics the functionality of DokuWikis edit toolbar to make it easier
 to insert/edit wiki syntax. Unless otherwise noted all those mappings work
 only in insert mode.
 
-    <ALT+1>     insert Level1 headline
-
-    <ALT+2>     insert Level2 headline
-
-    <ALT+3>     insert Level3 headline
-
-    <ALT+4>     insert Level4 headline
-
-    <ALT+5>     insert Level5 headline
-
-    <ALT+B>     insert bold text
-
-    <ALT+I>     insert italic text
-
-    <ALT+U>     insert underlined text
-
-    <ALT+C>     insert monospaced text
-
-    <ALT+D>     insert deleted text
-
-    <ALT+L>     insert wiki link
-
-    <ALT+E>     opens a link under the current cursor position for editing
+    e           opens a link under the current cursor position for editing
                 (this mappings only works in normal mode)
 
 ------------------------------------------------------------------------------

@@ -79,9 +79,6 @@ except ImportError:
     print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
     sys.exit(1)
 
-# TODO
-# test id_lookup()
-# FIXME provide easy way to show number of last changes (DWChanges 1week etc.)
 
 class DokuVimKi:
     """
@@ -95,6 +92,7 @@ class DokuVimKi:
         Instantiates special buffers, setup the xmlrpc connection and loads the
         page index and displays the recent changes of the last 7 days.
         """
+
         if self.xmlrpc_init():
 
             vim.command("command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
@@ -186,7 +184,6 @@ class DokuVimKi:
 
                     if perm >= 2:
                         if not self.lock(wp):
-                            # FIXME use exceptions
                             return
 
                         print >>sys.stdout, "Opening %s for editing ..." % wp
@@ -392,7 +389,7 @@ class DokuVimKi:
         vim.command('2')
 
 
-    def changes(self, timestamp=False):
+    def changes(self, timeframe=False):
         """
         Shows the last changes on the remote wiki.
         """
@@ -405,8 +402,21 @@ class DokuVimKi:
         vim.command('silent! buffer! ' + self.buffers['changes'].num)
         vim.command('setlocal modifiable')
 
-        if not timestamp:
+        if not timeframe:
             timestamp = int(time.time()) - (60*60*24*7)
+        else:
+            m = re.match(r'(?P<num>\d+)(?P<type>[dw]{1})', timeframe)
+            try:
+                argv = m.groupdict()
+
+                if argv['type'] == 'd':
+                    timestamp = int(time.time()) - (60*60*24*int(argv['num']))
+
+                if argv['type'] == 'w':
+                    timestamp = int(time.time()) - (60*60*24*(int(argv['num'])*7))
+
+            except AttributeError, err:
+                print >>sys.stderr, "Error: wrong timeframe format %s." % timeframe
 
         try:
             changes = self.xmlrpc.recent_changes(timestamp)
@@ -568,7 +578,6 @@ class DokuVimKi:
             vim.command('bp!')
             vim.command('bdel! ' + self.buffers[wp].num)
             if self.buffers[wp].type == 'acwrite':
-                # FIXME test for success?
                 self.unlock(wp)
             del self.buffers[wp]
         else:
@@ -852,6 +861,13 @@ class DokuVimKi:
         vim.command('setlocal syntax=dokuwiki')
         vim.command('setlocal filetype=dokuwiki')
         vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
+        vim.command('imap <C-D><C-B> ****<ESC>1hi')
+        vim.command('imap <C-D><C-I> ////<ESC>1hi')
+        vim.command('imap <C-D><C-U> ____<ESC>1hi')
+        vim.command('imap <C-D><C-L> [[]]<ESC>1hi')
+        vim.command('imap <C-D><C-M> {{}}<ESC>1hi')
+        vim.command('imap <C-D><C-C> <code></code><ESC>6hi') # FIXME
+        vim.command('imap <C-D><C-F> <file></file><ESC>6hi')
 
 
 
