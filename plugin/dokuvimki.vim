@@ -104,6 +104,7 @@ class DokuVimKi:
             vim.command("command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')")
             vim.command("command! -nargs=0 DWClose exec('py dokuvimki.close()')")
             vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
+            vim.command("command! -nargs=0 DWDiffclose exec('py dokuvimki.diff_close()')")
             vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
             vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
             vim.command("command! -nargs=0 DWFQuit exec('py dokuvimki.quit(True)')")
@@ -225,17 +226,16 @@ class DokuVimKi:
 
         data = revline.split()
         wp   = data[0]
-        date = data[1]
         rev  = data[2]
+        date = time.strftime('%Y-%m-%d@%Hh%mm%Ss', time.localtime(float(rev)))
 
         if not self.buffers.has_key(wp):
-            print >>sys.stdout, "meh"
             self.edit(wp)
 
         if not self.buffers[wp].diff.has_key(rev):
             text = self.xmlrpc.page(wp, int(rev))
             if text:
-                self.buffers[wp].diff[rev] = Buffer(wp + '-' + date, 'nofile')
+                self.buffers[wp].diff[rev] = Buffer(wp + '_' + date, 'nofile')
                 lines = text.split("\n")
                 self.buffers[wp].diff[rev].page[:] = map(lambda x: x.encode('utf-8'), lines)
             else:
@@ -248,6 +248,9 @@ class DokuVimKi:
         self.focus(3)
         vim.command('silent! buffer! ' + self.buffers[wp].diff[rev].num)
         vim.command('setlocal modifiable')
+        vim.command('abbr <buffer> close DWDiffclose')
+        vim.command('abbr <buffer> DWClose DWDiffclose')
+        vim.command('abbr <buffer> DWFClose DWDiffclose')
         self.buffers[wp].diff[rev].buf[:]  = self.buffers[wp].diff[rev].page
         vim.command('setlocal nomodifiable')
         self.buffer_setup()
@@ -568,6 +571,10 @@ class DokuVimKi:
         Closes the current buffer. Works only if the current buffer is a wiki
         page.  The buffer is also removed from the buffer stack.
         """
+
+        if self.diffmode:
+            self.diff_close()
+            return
 
         wp = vim.current.buffer.name.rsplit('/', 1)[1]
         if self.buffers[wp].iswp: 
