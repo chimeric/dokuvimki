@@ -643,8 +643,10 @@ class DokuVimKi:
         for buffer in self.buffers.keys():
             if self.buffers[buffer].iswp:
                 if not self.buffers[buffer].modified:
+                    vim.command('silent! buffer! ' + self.buffers[buffer].num)
                     self.close()
                 elif self.buffers[buffer].modified and force:
+                    vim.command('silent! buffer! ' + self.buffers[buffer].num)
                     self.close(True)
                 else:
                     unsaved.append(buffer)
