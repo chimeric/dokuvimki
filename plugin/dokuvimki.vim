@@ -19,46 +19,47 @@
 " URL:          http://www.chimeric.de/projects/dokuwiki/dokuvimki
 "-----------------------------------------------------------------------------
 
-command! -nargs=0 DokuVimKi exec('py dokuvimki()')
+if has('python')
+  command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
-" Custom autocompletion function for wiki pages and media files
-" the global g:pages g:media variables are set/refreshed 
-" when the index is loaded
-fun! CompleteLinks(findstart, base)
-  if a:findstart
-    " locate the start of the page/media link
-    let line = getline('.')
-    let start = col('.') - 1
-    while start > 0 && line[start - 1] !~ '\([\|{\)'
-      let start -= 1
-    endwhile
-    if line[start - 1] =~ "["
-      let g:comp = "pages"
-    elseif line[start - 1] =~ "{"
-      let g:comp = "media"
+  " Custom autocompletion function for wiki pages and media files
+  " the global g:pages g:media variables are set/refreshed 
+  " when the index is loaded
+  fun! CompleteLinks(findstart, base)
+    if a:findstart
+      " locate the start of the page/media link
+      let line = getline('.')
+      let start = col('.') - 1
+      while start > 0 && line[start - 1] !~ '\([\|{\)'
+        let start -= 1
+      endwhile
+      if line[start - 1] =~ "["
+        let g:comp = "pages"
+      elseif line[start - 1] =~ "{"
+        let g:comp = "media"
+      endif
+      return start
+    else
+      " find matching pages/media
+      let res = []
+      if g:comp =~ "pages"
+        for m in split(g:pages)
+          if m =~ '^' . a:base
+            call add(res, m)
+          endif
+        endfor
+      elseif g:comp =~ "media"
+        for m in split(g:media)
+          if m =~ '^' . a:base
+        call add(res, m)
+          endif
+        endfor
+      endif
+      return res
     endif
-    return start
-  else
-    " find matching pages/media
-    let res = []
-    if g:comp =~ "pages"
-      for m in split(g:pages)
-        if m =~ '^' . a:base
-          call add(res, m)
-        endif
-      endfor
-    elseif g:comp =~ "media"
-      for m in split(g:media)
-        if m =~ '^' . a:base
-      call add(res, m)
-        endif
-      endfor
-    endif
-    return res
-  endif
-endfun
-set completefunc=CompleteLinks
-set omnifunc=CompleteLinks
+  endfun
+  set completefunc=CompleteLinks
+  set omnifunc=CompleteLinks
 
 python <<EOF
 # -*- coding: utf-8 -*-
@@ -972,7 +973,15 @@ class Buffer:
 
 
 def dokuvimki():
+    """
+    Creates the global dokuvimki instance.
+    """
     global dokuvimki
     dokuvimki = DokuVimKi()
 
-# vim:ts=4:sw=4:et:enc=utf-8:
+
+EOF
+  else
+    command! -nargs=0 DokuVimKi echoerr "DokuVimKi disabled! Python support missing."
+endif
+" vim:ts=4:sw=4:et:enc=utf-8:
