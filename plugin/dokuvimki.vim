@@ -107,6 +107,7 @@ class DokuVimKi:
             vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
             vim.command("command! -nargs=0 DWDiffclose exec('py dokuvimki.diff_close()')")
             vim.command("command! -complete=file -nargs=1 DWUpload exec('py dokuvimki.upload(<f-args>)')")
+            vim.command("command! -complete=file -nargs=1 DWFUpload exec('py dokuvimki.upload(<f-args>, True)')")
             vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
             vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
             vim.command("command! -nargs=0 DWFQuit exec('py dokuvimki.quit(True)')")
@@ -338,7 +339,7 @@ class DokuVimKi:
                     self.xmlrpc.put_file(file_id, data, overwrite)
                     print >>sys.stdout, "Uploaded %s successfully." % fname
                     self.refresh()
-                except dokuwikixmlrpc.DokuWIKIXMLRPCError, err:
+                except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
                     print >>sys.stderr, err
             except IOError, err:
                 print >>sys.stderr, err
