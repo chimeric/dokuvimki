@@ -425,7 +425,14 @@ class DokuVimKi:
             changes = self.xmlrpc.recent_changes(timestamp)
             lines = []
             if len(changes) > 0:
+                maxlen = 0;
                 for change in changes:
+                    changelen = len(change['name'])
+                    if changelen > maxlen:
+                        maxlen = changelen
+
+                for change in changes:
+                    change['name'] = change['name'] + ' ' * (maxlen - len(change['name']))
                     line = "\t".join(map(lambda x: str(change[x]), ['name', 'lastModified', 'version', 'author']))
                     lines.append(line)
                 
@@ -433,6 +440,13 @@ class DokuVimKi:
                 self.buffers['changes'].buf[:] = lines
                 vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
                 vim.command('setlocal nomodifiable')
+
+                vim.command('syn match DokuVimKi_REV_PAGE /^\(\w\|:\)*/')
+                vim.command('syn match DokuVimKi_REV_TS /\s\d*\s/')
+
+                vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow')
+                vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow')
+
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No changes'
         except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
