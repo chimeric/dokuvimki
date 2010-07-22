@@ -916,7 +916,7 @@ class DokuVimKi:
 
 
 
-class Buffer():
+class Buffer:
     """
     Representates a vim buffer object. Used to manage keep track of all opened
     pages and to handle the dokuvimki special buffers.
