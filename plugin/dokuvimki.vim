@@ -72,13 +72,6 @@ import re
 import vim
 import time
 
-try:
-    import dokuwikixmlrpc
-except ImportError:
-    print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
-    sys.exit(1)
-
-
 class DokuVimKi:
     """
     Provides all necessary functionality to interface between the DokuWiki
@@ -134,6 +127,12 @@ class DokuVimKi:
         """
         Establishes the xmlrpc connection to the remote wiki.
         """
+
+        try:
+            import dokuwikixmlrpc
+        except ImportError:
+            print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
+            return False
 
         self.dw_user = vim.eval('g:DokuVimKi_USER')
         self.dw_pass = vim.eval('g:DokuVimKi_PASS')
