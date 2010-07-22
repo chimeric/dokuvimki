@@ -25,39 +25,37 @@ command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 " the global g:pages g:media variables are set/refreshed 
 " when the index is loaded
 fun! CompleteLinks(findstart, base)
-    if a:findstart
-	    " locate the start of the page/media link
-	    let line = getline('.')
-	    let start = col('.') - 1
-	    while start > 0 && line[start - 1] !~ '\([\|{\)'
-	      let start -= 1
-	    endwhile
-        if line[start - 1] =~ "["
-          let g:comp = "pages"
-        elseif line[start - 1] =~ "{"
-          let g:comp = "media"
-        endif
-	    return start
-    else
-        " find matching pages/media
-	    let res = []
-        if g:comp =~ "pages"
-          echo "pages"
-          for m in split(g:pages)
-            if m =~ '^' . a:base
-          call add(res, m)
-            endif
-          endfor
-        elseif g:comp =~ "media"
-          echo "media"
-          for m in split(g:media)
-            if m =~ '^' . a:base
-          call add(res, m)
-            endif
-          endfor
-        endif
-	    return res
+  if a:findstart
+    " locate the start of the page/media link
+    let line = getline('.')
+    let start = col('.') - 1
+    while start > 0 && line[start - 1] !~ '\([\|{\)'
+      let start -= 1
+    endwhile
+    if line[start - 1] =~ "["
+      let g:comp = "pages"
+    elseif line[start - 1] =~ "{"
+      let g:comp = "media"
     endif
+    return start
+  else
+    " find matching pages/media
+    let res = []
+    if g:comp =~ "pages"
+      for m in split(g:pages)
+        if m =~ '^' . a:base
+          call add(res, m)
+        endif
+      endfor
+    elseif g:comp =~ "media"
+      for m in split(g:media)
+        if m =~ '^' . a:base
+      call add(res, m)
+        endif
+      endfor
+    endif
+    return res
+  endif
 endfun
 set completefunc=CompleteLinks
 set omnifunc=CompleteLinks
@@ -913,8 +911,8 @@ class DokuVimKi:
         vim.command('imap <C-D><C-U> ____<ESC>1hi')
         vim.command('imap <C-D><C-L> [[]]<ESC>1hi')
         vim.command('imap <C-D><C-M> {{}}<ESC>1hi')
-        vim.command('imap <C-D><C-K> <code>\n</code><ESC>ki')
-        vim.command('imap <C-D><C-F> <file>\n</file><ESC>ki')
+        vim.command('imap <C-D><C-K> <code><CR><CR></code><ESC>ki')
+        vim.command('imap <C-D><C-F> <file><CR><CR></file><ESC>ki')
 
 
 
