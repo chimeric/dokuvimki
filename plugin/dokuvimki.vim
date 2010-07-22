@@ -69,6 +69,7 @@ __version__ = '2010-07-01';
 __author__  = 'Michael Klier <chi@chimeric.de>'
 
 import sys
+import os
 import re
 import vim
 import time
@@ -105,6 +106,7 @@ class DokuVimKi:
             vim.command("command! -nargs=0 DWClose exec('py dokuvimki.close()')")
             vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
             vim.command("command! -nargs=0 DWDiffclose exec('py dokuvimki.diff_close()')")
+            vim.command("command! -complete=file -nargs=1 DWUpload exec('py dokuvimki.upload(<f-args>)')")
             vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
             vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
             vim.command("command! -nargs=0 DWFQuit exec('py dokuvimki.quit(True)')")
@@ -317,6 +319,31 @@ class DokuVimKi:
                         print >>sys.stderr, 'DokuVimKi Error: %s' % err
         except KeyError, err:
             print >>sys.stderr, "Error: Current buffer %s is not handled by DWSave!" % wp
+
+
+    def upload(self, file, overwrite=False):
+        """
+        Uploads a file to the remote wiki.
+        """
+
+        path = os.path.realpath(file)
+        fname = os.path.basename(path)
+
+        if os.path.isfile(path):
+            try:
+                fh = open(path, 'r')
+                data = fh.read()
+                file_id = self.cur_ns + fname
+                try:
+                    self.xmlrpc.put_file(file_id, data, overwrite)
+                    print >>sys.stdout, "Uploaded %s successfully." % fname
+                    self.refresh()
+                except dokuwikixmlrpc.DokuWIKIXMLRPCError, err:
+                    print >>sys.stderr, err
+            except IOError, err:
+                print >>sys.stderr, err
+        else:
+            print >>sys.stderr, '%s is not a file' % path
 
     
     def index(self, query='', refresh=False):
@@ -885,8 +912,8 @@ class DokuVimKi:
         vim.command('imap <C-D><C-U> ____<ESC>1hi')
         vim.command('imap <C-D><C-L> [[]]<ESC>1hi')
         vim.command('imap <C-D><C-M> {{}}<ESC>1hi')
-        vim.command('imap <C-D><C-C> <code></code><ESC>6hi') # FIXME
-        vim.command('imap <C-D><C-F> <file></file><ESC>6hi')
+        vim.command('imap <C-D><C-K> <code>\n</code><ESC>ki')
+        vim.command('imap <C-D><C-F> <file>\n</file><ESC>ki')
 
 
 
