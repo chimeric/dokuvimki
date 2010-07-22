@@ -286,11 +286,10 @@ class DokuVimKi:
             elif self.buffers[wp].type == 'nowrite':
                 print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
             else:
-                if not self.ismodified(wp):
+                text = "\n".join(self.buffers[wp].buf)
+                if not self.ismodified(wp) and text:
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 else:
-                    text = "\n".join(self.buffers[wp].buf)
-
                     if not sum and text:
                         sum = 'xmlrpc edit'
                         minor = 1
@@ -309,10 +308,10 @@ class DokuVimKi:
                                 self.needs_refresh = False
                                 self.focus(2)
                         else:
+                            print >>sys.stdout, 'Page %s removed!' % wp
                             self.close()
                             self.index(self.cur_ns, True)
                             self.focus(2)
-                            print >>sys.stdout, 'Page %s removed!' % wp
 
                     except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
                         print >>sys.stderr, 'DokuVimKi Error: %s' % err
@@ -341,7 +340,6 @@ class DokuVimKi:
         vim.command('hi DokuVimKi_NS cterm=bold ctermfg=LightBlue')
         vim.command('hi DokuVimKi_CURNS cterm=bold ctermfg=Yellow')
 
-        # FIXME ???
         if refresh:
             self.refresh()
 
@@ -449,6 +447,7 @@ class DokuVimKi:
 
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No changes'
+
         except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
             print >>sys.stderr, err
 
@@ -714,10 +713,10 @@ class DokuVimKi:
         result = self.set_locks(locks)
 
         if locks['lock'] == result['locked']:
-            print >>sys.stdout, "Locked page %s for editing. You have to wait until the lock expires." % wp
+            print >>sys.stdout, "Locked page %s for editing." % wp
             return True
         else:
-            print >>sys.stderr, "Failed to lock page %s" % wp
+            print >>sys.stderr, 'The page "%s" appears to be locked for editing. You have to wait until the lock expires.' % wp
             return False
 
     
@@ -734,7 +733,6 @@ class DokuVimKi:
         if locks['unlock'] == result['unlocked']:
             return True
         else:
-            print >>sys.stderr, "Failed to unlock page %s" % wp
             return False
 
 
