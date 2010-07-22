@@ -85,6 +85,10 @@ class DokuVimKi:
         page index and displays the recent changes of the last 7 days.
         """
 
+        if sys.version_info < (2,4):
+            print >>sys.stderr, "DokuVimKi requires at least python Version 2.4 or greater!"
+            return
+
         if self.xmlrpc_init():
 
             vim.command("command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
