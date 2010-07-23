@@ -85,6 +85,15 @@ import re
 import vim
 import time
 
+try:
+    import dokuwikixmlrpc
+    has_dokuwikixmlrpc = True
+except ImportError:
+    print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
+    has_dokuwikixmlrpc = False
+
+
+
 class DokuVimKi:
     """
     Provides all necessary functionality to interface between the DokuWiki
@@ -100,6 +109,10 @@ class DokuVimKi:
 
         if sys.version_info < (2,4):
             print >>sys.stderr, "DokuVimKi requires at least python Version 2.4 or greater!"
+            return
+
+        if not has_dokuwikixmlrpc:
+            print >>sys.stderr, "dokuwikixmlrpc python module missing!"
             return
 
         if self.xmlrpc_init():
@@ -142,12 +155,6 @@ class DokuVimKi:
         """
         Establishes the xmlrpc connection to the remote wiki.
         """
-
-        try:
-            import dokuwikixmlrpc
-        except ImportError:
-            print >>sys.stderr, 'DokuVimKi Error: The dokuwikixmlrpc python module is missing!'
-            return False
 
         self.dw_user = vim.eval('g:DokuVimKi_USER')
         self.dw_pass = vim.eval('g:DokuVimKi_PASS')
@@ -324,7 +331,7 @@ class DokuVimKi:
                                 self.focus(2)
                         else:
                             print >>sys.stdout, 'Page %s removed!' % wp
-                            self.close()
+                            self.close(False)
                             self.index(self.cur_ns, True)
                             self.focus(2)
 
