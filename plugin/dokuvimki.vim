@@ -111,14 +111,12 @@ class DokuVimKi:
             vim.command("command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')")
             vim.command("command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')")
             vim.command("command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')")
-            vim.command("command! -nargs=0 DWClose exec('py dokuvimki.close()')")
-            vim.command("command! -nargs=0 DWFClose exec('py dokuvimki.close(True)')")
+            vim.command("command! -nargs=0 -bang DWClose exec('py dokuvimki.close(\"<bang>\")')")
             vim.command("command! -nargs=0 DWDiffclose exec('py dokuvimki.diff_close()')")
             vim.command("command! -complete=file -nargs=1 DWUpload exec('py dokuvimki.upload(<f-args>)')")
             vim.command("command! -complete=file -nargs=1 DWFUpload exec('py dokuvimki.upload(<f-args>, True)')")
             vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
-            vim.command("command! -nargs=0 DWQuit exec('py dokuvimki.quit()')")
-            vim.command("command! -nargs=0 DWFQuit exec('py dokuvimki.quit(True)')")
+            vim.command("command! -nargs=0 -bang DWQuit exec('py dokuvimki.quit(\"<bang>\")')")
 
             self.buffers = {}
             self.buffers['search']    = Buffer('search', 'nofile')
@@ -619,9 +617,8 @@ class DokuVimKi:
         except:
             pass
 
-
     
-    def close(self, force=False):
+    def close(self, bang):
         """
         Closes the current buffer. Works only if the current buffer is a wiki
         page.  The buffer is also removed from the buffer stack.
@@ -631,22 +628,26 @@ class DokuVimKi:
             self.diff_close()
             return
 
-        wp = vim.current.buffer.name.rsplit('/', 1)[1]
-        if self.buffers[wp].iswp: 
-            if not force and self.ismodified(wp):
-                print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWFClose." % wp
-                return
+        try:
+            buffer = vim.current.buffer.name.rsplit('/', 1)[1]
+            if self.buffers[buffer].iswp: 
+                if not bang and self.ismodified(buffer):
+                    print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWClose!." % buffer
+                    return
 
-            vim.command('bp!')
-            vim.command('bdel! ' + self.buffers[wp].num)
-            if self.buffers[wp].type == 'acwrite':
-                self.unlock(wp)
-            del self.buffers[wp]
-        else:
-            print >>sys.stderr, 'You cannot close special buffer "%s"!' % wp
+                vim.command('bp!')
+                vim.command('bdel! ' + self.buffers[buffer].num)
+                if self.buffers[buffer].type == 'acwrite':
+                    self.unlock(buffer)
+                del self.buffers[buffer]
+            else:
+                print >>sys.stderr, 'You cannot close special buffer "%s"!' % buffer
+
+        except KeyError, err:
+            print >>sys.stderr, 'You cannot use DWClose on non wiki page "%s"!' % buffer
 
 
-    def quit(self, force=False):
+    def quit(self, bang):
         """
         Quits the current session. 
         """
@@ -657,8 +658,8 @@ class DokuVimKi:
             if self.buffers[buffer].iswp:
                 if not self.buffers[buffer].modified:
                     vim.command('silent! buffer! ' + self.buffers[buffer].num)
-                    self.close()
-                elif self.buffers[buffer].modified and force:
+                    self.close(False)
+                elif self.buffers[buffer].modified and bang:
                     vim.command('silent! buffer! ' + self.buffers[buffer].num)
                     self.close(True)
                 else:
