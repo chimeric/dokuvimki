@@ -722,20 +722,27 @@ class DokuVimKi:
         remote server and updating the completion dictionary.
         """
 
+        self.pages = []
+        self.media = []
+
         print >>sys.stdout, "Refreshing page index!"
         data = self.xmlrpc.all_pages()
-        self.pages = []
 
         if data:
             for page in data:
-                self.pages.append(page['id'].encode('utf-8'))
+                page = page['id'].encode('utf-8')
+                ns   = page.rsplit(':', 1)[0] + ':'
+                self.pages.append(page)
+                if not ns in self.pages:
+                    self.pages.append(ns)
+                    self.media.append(ns)
+                
 
         self.pages.sort()
         vim.command('let g:pages = "' + " ".join(self.pages) + '"')
 
         print >>sys.stdout, "Refreshing media index!"
         data = self.xmlrpc.list_files(':', True)
-        self.media = []
 
         if data:
             for media in data:
