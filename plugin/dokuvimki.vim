@@ -25,7 +25,7 @@ if has('python')
   " Custom autocompletion function for wiki pages and media files
   " the global g:pages g:media variables are set/refreshed 
   " when the index is loaded
-  fun! CompleteLinks(findstart, base)
+  fun! InsertModeComplete(findstart, base)
     if a:findstart
       " locate the start of the page/media link
       let line = getline('.')
@@ -51,15 +51,27 @@ if has('python')
       elseif g:comp =~ "media"
         for m in split(g:media)
           if m =~ '^' . a:base
-        call add(res, m)
+            call add(res, m)
           endif
         endfor
       endif
       return res
     endif
   endfun
-  set completefunc=CompleteLinks
-  set omnifunc=CompleteLinks
+  set completefunc=InsertModeComplete
+  set omnifunc=InsertModeComplete
+
+  " Custom autocompletion function for namespaces and pages in
+  " normal mode. Used with DWEdit
+  fun! CmdModeComplete(ArgLead, CmdLine, CursorPos)
+    let res = []
+    for m in split(g:pages)
+      if m =~ '^' . a:ArgLead
+        call add(res, m)
+      endif
+    endfor
+    return res
+  endfun
 
 python <<EOF
 # -*- coding: utf-8 -*-
@@ -92,7 +104,7 @@ class DokuVimKi:
 
         if self.xmlrpc_init():
 
-            vim.command("command! -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
+            vim.command("command! -complete=customlist,CmdModeComplete -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
             vim.command("command! -nargs=? DWSave exec('py dokuvimki.save(<f-args>)')")
             vim.command("command! -nargs=? DWSearch exec('py dokuvimki.search(\"page\", <f-args>)')")
             vim.command("command! -nargs=? DWMediaSearch exec('py dokuvimki.search(\"media\", <f-args>)')")
