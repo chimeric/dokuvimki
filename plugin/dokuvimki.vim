@@ -1,5 +1,5 @@
 "-----------------------------------------------------------------------------
-" Copyright (C) 2008 Michael Klier <chi@chimeric.de>
+" Copyright (C) 2010 Michael Klier <chi@chimeric.de>
 "
 " This program is free software; you can redistribute it and/or modify
 " it under the terms of the GNU General Public License as published by
@@ -272,7 +272,6 @@ class DokuVimKi:
         vim.command('setlocal modifiable')
         vim.command('abbr <buffer> close DWDiffclose')
         vim.command('abbr <buffer> DWClose DWDiffclose')
-        vim.command('abbr <buffer> DWFClose DWDiffclose')
         self.buffers[wp].diff[rev].buf[:]  = self.buffers[wp].diff[rev].page
         vim.command('setlocal nomodifiable')
         self.buffer_setup()
