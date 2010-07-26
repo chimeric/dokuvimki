@@ -62,7 +62,7 @@ if has('python')
   set omnifunc=InsertModeComplete
 
   " Custom autocompletion function for namespaces and pages in
-  " normal mode. Used with DWEdit
+  " normal mode. Used with DWedit
   fun! CmdModeComplete(ArgLead, CmdLine, CursorPos)
     let res = []
     for m in split(g:pages)
@@ -71,6 +71,22 @@ if has('python')
       endif
     endfor
     return res
+  endfun
+
+  " Inserts a headline
+  let g:headlines = ["======  ======", "=====  =====", "====  ====", "===  ===", "==  =="]
+  fun! Headline()
+    return g:headlines[g:lvl]
+  endfun
+
+  " Sets indentation/headline level
+  let g:lvl = 0
+  fun! SetLvl(lvl)
+    let nlvl = g:lvl + a:lvl
+    if nlvl >= 1 && nlvl <= 4
+      let g:lvl = nlvl
+    endif
+    return ''
   endfun
 
 python <<EOF
@@ -117,19 +133,18 @@ class DokuVimKi:
 
         if self.xmlrpc_init():
 
-            vim.command("command! -complete=customlist,CmdModeComplete -nargs=1 DWEdit exec('py dokuvimki.edit(<f-args>)')")
-            vim.command("command! -nargs=? DWSave exec('py dokuvimki.save(<f-args>)')")
-            vim.command("command! -nargs=? DWSearch exec('py dokuvimki.search(\"page\", <f-args>)')")
-            vim.command("command! -nargs=? DWMediaSearch exec('py dokuvimki.search(\"media\", <f-args>)')")
-            vim.command("command! -nargs=* DWRevisions exec('py dokuvimki.revisions(<f-args>)')")
-            vim.command("command! -nargs=? DWBacklinks exec('py dokuvimki.backlinks(<f-args>)')")
-            vim.command("command! -nargs=? DWChanges exec('py dokuvimki.changes(<f-args>)')")
-            vim.command("command! -nargs=0 -bang DWClose exec('py dokuvimki.close(\"<bang>\")')")
-            vim.command("command! -nargs=0 DWDiffclose exec('py dokuvimki.diff_close()')")
-            vim.command("command! -complete=file -nargs=1 DWUpload exec('py dokuvimki.upload(<f-args>)')")
-            vim.command("command! -complete=file -nargs=1 DWFUpload exec('py dokuvimki.upload(<f-args>, True)')")
-            vim.command("command! -nargs=0 DWHelp exec('py dokuvimki.help()')")
-            vim.command("command! -nargs=0 -bang DWQuit exec('py dokuvimki.quit(\"<bang>\")')")
+            vim.command("command! -complete=customlist,CmdModeComplete -nargs=1 DWedit exec('py dokuvimki.edit(<f-args>)')")
+            vim.command("command! -nargs=? DWsave exec('py dokuvimki.save(<f-args>)')")
+            vim.command("command! -nargs=? DWsearch exec('py dokuvimki.search(\"page\", <f-args>)')")
+            vim.command("command! -nargs=? DWmediasearch exec('py dokuvimki.search(\"media\", <f-args>)')")
+            vim.command("command! -nargs=* DWrevisions exec('py dokuvimki.revisions(<f-args>)')")
+            vim.command("command! -nargs=? DWbacklinks exec('py dokuvimki.backlinks(<f-args>)')")
+            vim.command("command! -nargs=? DWchanges exec('py dokuvimki.changes(<f-args>)')")
+            vim.command("command! -nargs=0 -bang DWclose exec('py dokuvimki.close(\"<bang>\")')")
+            vim.command("command! -nargs=0 DWdiffclose exec('py dokuvimki.diff_close()')")
+            vim.command("command! -complete=file -nargs=1 DWupload exec('py dokuvimki.upload(<f-args>,\"<bang>\")')")
+            vim.command("command! -nargs=0 DWhelp exec('py dokuvimki.help()')")
+            vim.command("command! -nargs=0 -bang DWquit exec('py dokuvimki.quit(\"<bang>\")')")
 
             self.buffers = {}
             self.buffers['search']    = Buffer('search', 'nofile')
@@ -270,8 +285,8 @@ class DokuVimKi:
         self.focus(3)
         vim.command('silent! buffer! ' + self.buffers[wp].diff[rev].num)
         vim.command('setlocal modifiable')
-        vim.command('abbr <buffer> close DWDiffclose')
-        vim.command('abbr <buffer> DWClose DWDiffclose')
+        vim.command('abbr <buffer> close DWdiffclose')
+        vim.command('abbr <buffer> DWclose DWdiffclose')
         self.buffers[wp].diff[rev].buf[:]  = self.buffers[wp].diff[rev].page
         vim.command('setlocal nomodifiable')
         self.buffer_setup()
@@ -312,7 +327,7 @@ class DokuVimKi:
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 else:
                     if not sum and text:
-                        sum = 'xmlrpc edit'
+                        sum = '[xmlrpc edit]'
                         minor = 1
 
                     try:
@@ -337,7 +352,7 @@ class DokuVimKi:
                     except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
                         print >>sys.stderr, 'DokuVimKi Error: %s' % err
         except KeyError, err:
-            print >>sys.stderr, "Error: Current buffer %s is not handled by DWSave!" % wp
+            print >>sys.stderr, "Error: Current buffer %s is not handled by DWsave!" % wp
 
 
     def upload(self, file, overwrite=False):
@@ -383,8 +398,9 @@ class DokuVimKi:
         vim.command('setlocal nonumber')
         vim.command('syn match DokuVimKi_NS /^.*\//')
         vim.command('syn match DokuVimKi_CURNS /^ns:/')
-        vim.command('hi DokuVimKi_NS cterm=bold ctermfg=LightBlue')
-        vim.command('hi DokuVimKi_CURNS cterm=bold ctermfg=Yellow')
+
+        vim.command('hi DokuVimKi_NS term=bold cterm=bold ctermfg=LightBlue gui=bold guifg=LightBlue')
+        vim.command('hi DokuVimKi_CURNS term=bold cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
 
         if refresh:
             self.refresh()
@@ -453,17 +469,19 @@ class DokuVimKi:
             timestamp = int(time.time()) - (60*60*24*7)
         else:
             m = re.match(r'(?P<num>\d+)(?P<type>[dw]{1})', timeframe)
-            try:
+            if m:
                 argv = m.groupdict()
 
                 if argv['type'] == 'd':
                     timestamp = int(time.time()) - (60*60*24*int(argv['num']))
-
-                if argv['type'] == 'w':
+                elif argv['type'] == 'w':
                     timestamp = int(time.time()) - (60*60*24*(int(argv['num'])*7))
-
-            except AttributeError, err:
-                print >>sys.stderr, "Error: wrong timeframe format %s." % timeframe
+                else:
+                    print >>sys.stderr, "Wrong timeframe format %s." % timeframe
+                    return
+            else:
+                print >>sys.stderr, "Wrong timeframe format %s." % timeframe
+                return
 
         try:
             changes = self.xmlrpc.recent_changes(timestamp)
@@ -482,14 +500,14 @@ class DokuVimKi:
                 
                 lines.reverse()
                 self.buffers['changes'].buf[:] = lines
-                vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
-                vim.command('setlocal nomodifiable')
-
                 vim.command('syn match DokuVimKi_REV_PAGE /^\(\w\|:\)*/')
                 vim.command('syn match DokuVimKi_REV_TS /\s\d*\s/')
 
-                vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow')
-                vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow')
+                vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
+                vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
+
+                vim.command('setlocal nomodifiable')
+                vim.command('map <silent> <buffer> <enter> :py dokuvimki.rev_edit()<CR>')
 
             else:
                 print >>sys.stderr, 'DokuVimKi Error: No changes'
@@ -530,9 +548,9 @@ class DokuVimKi:
                 vim.command('syn match DokuVimKi_REV_TS /\s\d*\s/')
                 vim.command('syn match DokuVimKi_REV_CHANGE /\s\w\{1}\s/')
 
-                vim.command('hi DokuVimKi_REV_PAGE cterm=bold ctermfg=Yellow')
-                vim.command('hi DokuVimKi_REV_TS cterm=bold ctermfg=Yellow')
-                vim.command('hi DokuVimKi_REV_CHANGE cterm=bold ctermfg=Yellow')
+                vim.command('hi DokuVimKi_REV_PAGE term=bold cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
+                vim.command('hi DokuVimKi_REV_TS term=bold cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
+                vim.command('hi DokuVimKi_REV_CHANGE term=bold cterm=bold ctermfg=Yellow gui=bold guifg=Yellow')
 
                 vim.command('setlocal nomodifiable')
                 vim.command('map <silent> <buffer> d :py dokuvimki.cmd("diff")<CR>')
@@ -638,7 +656,7 @@ class DokuVimKi:
             buffer = vim.current.buffer.name.rsplit('/', 1)[1]
             if self.buffers[buffer].iswp: 
                 if not bang and self.ismodified(buffer):
-                    print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWClose!." % buffer
+                    print >>sys.stderr, "Warning: %s contains unsaved changes! Use DWclose!." % buffer
                     return
 
                 vim.command('bp!')
@@ -650,7 +668,7 @@ class DokuVimKi:
                 print >>sys.stderr, 'You cannot close special buffer "%s"!' % buffer
 
         except KeyError, err:
-            print >>sys.stderr, 'You cannot use DWClose on non wiki page "%s"!' % buffer
+            print >>sys.stderr, 'You cannot use DWclose on non wiki page "%s"!' % buffer
 
 
     def quit(self, bang):
@@ -709,8 +727,8 @@ class DokuVimKi:
         """
 
         row, col = vim.current.window.cursor
-        wp  = vim.current.buffer[row-1].split("\t")[0]
-        rev = vim.current.buffer[row-1].split("\t")[2]
+        wp  = vim.current.buffer[row-1].split("\t")[0].strip()
+        rev = vim.current.buffer[row-1].split("\t")[2].strip()
         self.edit(wp, rev)
 
 
@@ -937,14 +955,21 @@ class DokuVimKi:
         vim.command('setlocal linebreak')
         vim.command('setlocal syntax=dokuwiki')
         vim.command('setlocal filetype=dokuwiki')
+        vim.command('setlocal tabstop=2')
+        vim.command('setlocal expandtab')
+        vim.command('setlocal shiftwidth=2')
+        vim.command('setlocal encoding=utf-8')
         vim.command('map <buffer> <silent> e :py dokuvimki.id_lookup()<CR>')
-        vim.command('imap <C-D><C-B> ****<ESC>1hi')
-        vim.command('imap <C-D><C-I> ////<ESC>1hi')
-        vim.command('imap <C-D><C-U> ____<ESC>1hi')
-        vim.command('imap <C-D><C-L> [[]]<ESC>1hi')
-        vim.command('imap <C-D><C-M> {{}}<ESC>1hi')
-        vim.command('imap <C-D><C-K> <code><CR><CR></code><ESC>ki')
-        vim.command('imap <C-D><C-F> <file><CR><CR></file><ESC>ki')
+        vim.command('imap <buffer> <silent> <C-D><C-B> ****<ESC>1hi')
+        vim.command('imap <buffer> <silent> <C-D><C-I> ////<ESC>1hi')
+        vim.command('imap <buffer> <silent> <C-D><C-U> ____<ESC>1hi')
+        vim.command('imap <buffer> <silent> <C-D><C-L> [[]]<ESC>1hi')
+        vim.command('imap <buffer> <silent> <C-D><C-M> {{}}<ESC>1hi')
+        vim.command('imap <buffer> <silent> <C-D><C-K> <code><CR><CR></code><ESC>ki')
+        vim.command('imap <buffer> <silent> <C-D><C-F> <file><CR><CR></file><ESC>ki')
+        vim.command('imap <buffer> <silent> <expr> <C-D><C-H> Headline()')
+        vim.command('imap <buffer> <silent> <expr> <C-D><C-P> SetLvl(+1)')
+        vim.command('imap <buffer> <silent> <expr> <C-D><C-D> SetLvl(-1)')
 
 
 
@@ -979,9 +1004,9 @@ class Buffer:
         self.page = []
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
-        vim.command('abbr <buffer> <silent> close DWClose')
-        vim.command('abbr <buffer> <silent> quit DWClose')
-        vim.command('abbr <buffer> <silent> q DWClose')
+        vim.command('abbr <buffer> <silent> close DWclose')
+        vim.command('abbr <buffer> <silent> quit DWclose')
+        vim.command('abbr <buffer> <silent> q DWclose')
 
         if type == 'nofile':
             vim.command('setlocal nobuflisted')

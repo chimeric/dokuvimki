@@ -14,9 +14,8 @@ OVERVIEW                                                  *dokuvimki-overview*
 
 |dokuvimki-commands|            Brief description of the available commands
 
-|dokuvimki-index-mappings|      Description of the various index mappings
-
-|dokuvimki-edit-mappings|       Description of the edit mappings
+|dokuvimki-buffer-mappings|     Description of the mappings available in the 
+                                special buffers
 
 |dokuvimki-bugs|                Bug reports are always welcome ;-)
 
@@ -54,53 +53,53 @@ g:DokuVimKi_AUTOCONNECT     Set to "yes" to establish a XML-RPC connection to
 ------------------------------------------------------------------------------
 COMMANDS                                                  *dokuvimki-commands*
 
-:DWEdit <page>              Opens the given wiki page in the edit buffer. If
+:DWedit <page>              Opens the given wiki page in the edit buffer. If
                             the page does not exist on the remote wiki it will
-                            be created once you issue :DWSave.
+                            be created once you issue :DWSave. You can use 
+                            <TAB> to autocomplete pages.
 
-:DWSave <summary>           Save the wiki page in the edit buffer to the
+:DWsave "<summary>"         Save the wiki page in the edit buffer to the
                             remote wiki. If no edit summary is given it 
-                            will be saved as minor edit.
+                            will be saved as minor edit. You can also use :w
+                            but it will not allow to specify a edit summary.
 
-:DWBackLinks <page>         Loads a list of pages which link back to the given
+:DWbackLinks <page>         Loads a list of pages which link back to the given
                             wiki page into the edit buffer. If you are already
                             editing a page you can use the command without
                             supplying a wiki page and it will load a list of
                             backlinks to the page loaded in the edit buffer.
 
-:DWRevisions <page> <offset>Lists the available revisions of a wiki page. You 
+:DWrevisions <page> <offset>Lists the available revisions of a wiki page. You 
                             can use an offset (integer) to view earlier 
                             revisions. The number of shown revisions depends 
                             on the $conf['recent'] setting of the remote wiki. 
                             By hitting <Enter> the revision under the cursor 
                             is loaded into the edit buffer.
 
-:DWSearch <pattern>         Searches for matching pages. You can use regular
+:DWsearch <pattern>         Searches for matching pages. You can use regular
                             expressions!
 
-:DWMediaSearch <pattern>    Searches for matching media files. You can use
+:DWmediasearch <pattern>    Searches for matching media files. You can use
                             regular expressions.
 
-:DWChanges                  Lists the recent changes of the remote wiki.
+:DWchanges                  Lists the recent changes of the remote wiki.
 
-:DWClose                    Closes the current edit buffer (removing edit 
-                            locks on the remote wiki etc.) - if the buffer
+:DWclose                    Closes the current edit buffer (removing edit 
+:DWclose!                   locks on the remote wiki etc.) - if the buffer
                             contains changes which haven't been synced back
                             to the remote wiki this command will issue a
                             warning.  You can also use :close which is setup
                             as abbreviation.
 
-:DWFClose                   Closes the current edit buffer even if it contains
-                            changes which haven't been synced back to the 
-                            remote wiki.
+:DWdiffclose                Closes diff mode
 
-:DWQuit                     Quits the current session and quits vim. This will
-                            fail if there are unsaved changes.
+:DWupload <file>            Allows to upload a file in the current namespace.
+:DWupload! <file>
 
-:DWFQuit                    Forces the current sesssion to quit, no matter if
-                            there are unsaved changes.
+:DWquit                     Quits the current session and quits vim. This will
+:DWquit!                    fail if there are unsaved changes.
 
-:DWHelp                     Displays the DokuVimKi help.
+:DWhelp                     Displays the DokuVimKi help.
 
 ------------------------------------------------------------------------------
 EDIT-MAPPINGS                                        *dokuvimki-edit-mappings*
@@ -109,15 +108,37 @@ DokuVimKi mimics the functionality of DokuWikis edit toolbar to make it easier
 to insert/edit wiki syntax. Unless otherwise noted all those mappings work
 only in insert mode.
 
+    <C-D><C-B>  inserts bold syntax
+
+    <C-D><C-I>  inserts italic syntax
+
+    <C-D><C-U>  inserts underline syntax
+
+    <C-D><C-L>  inserts link syntax
+
+    <C-D><C-M>  inserts media syntax
+
+    <C-D><C-K>  inserts code block syntax
+
+    <C-D><C-F>  inserts file block syntax
+
+    <C-D><C-H>  inserts a headline
+
+    <C-I><C-P>  increases the current headline level by one
+
+    <C-I><C-D>  decreases the current headline level by one
+
     e           opens a link under the current cursor position for editing
                 (this mappings only works in normal mode)
 
 ------------------------------------------------------------------------------
-INDEX-MAPPINGS                                      *dokuvimki-index-mappings*
+BUFFER-MAPPINGS                                    *dokuvimki-buffer-mappings*
 
-DokuVimKi comes with some specials mappings you can use in the index window
-on the right. Namespaces (folders) are indicated by havinga different color
-than pages (you can change the colors if you want see |dokuvimki-colors|).
+DokuVimKi comes with some specials mappings you can use in the special buffers
+like the index or the recent changes view.
+
+
+INDEX
 
     <ENTER>     Opens the page for editing, or lists the contents of the
                 namespace under the cursor.
@@ -126,6 +147,29 @@ than pages (you can change the colors if you want see |dokuvimki-colors|).
                 cursor.
 
     r           Shows the revisions of page under the cursor.
+
+
+REVISIONS
+
+    <ENTER>     Opens the page revision for editing.
+
+    d           Opens the diff view for the page and the revision under the
+                cursor.
+
+
+CHANGES
+
+    <ENTER>     Opens the page revision under the cursor for editing.
+
+
+SEARCH
+
+    <ENTER>     Opens the page under the cursor for editing.
+
+
+BACKLINKS
+
+    <ENTER>     Opens the page under the cursor for editing.
 
 ------------------------------------------------------------------------------
 BUGS                                                          *dokuvimki-bugs*
