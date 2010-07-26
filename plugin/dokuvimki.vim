@@ -174,6 +174,8 @@ class DokuVimKi:
 
             self.index_winwith = vim.eval('g:DokuVimKi_INDEX_WINWIDTH')
             self.index(self.cur_ns, True)
+
+            vim.command('set laststatus=2')
             vim.command('silent! ' + self.index_winwith + 'vsplit')
             self.help()
         
@@ -738,6 +740,7 @@ class DokuVimKi:
         # generate help tags just in case 
         vim.command('helptags ~/.vim/doc')
         vim.command('help dokuvimki')
+        vim.command("setlocal statusline=%{'[help]'}")
 
 
     def ismodified(self, wp):
@@ -1042,11 +1045,13 @@ class Buffer:
         vim.command('abbr <silent> q! DWquit!')
         vim.command('abbr <silent> qa DWquit')
         vim.command('abbr <silent> qa! DWquit!')
+        
 
         if type == 'nofile':
             vim.command('setlocal nobuflisted')
             vim.command('setlocal nomodifiable')
             vim.command('setlocal noswapfile')
+            vim.command("setlocal statusline=%{'[" + self.name + "]'}")
 
         if type == 'acwrite':
             self.diff = {}
@@ -1054,7 +1059,12 @@ class Buffer:
             vim.command('autocmd! BufEnter <buffer> py dokuvimki.buffer_enter("' + self.name + '")')
             vim.command('autocmd! BufLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
             vim.command('autocmd! InsertLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
-            vim.command('set encoding=utf-8')
+            vim.command("setlocal statusline=%{'[wp]\ " + self.name + "'}\ %r\ [%c,%l][%p]")
+
+        if type == 'nowrite':
+            self.diff = {}
+            self.modified = False
+            vim.command("setlocal statusline=%{'[wp]\ " + self.name + "'}\ %r\ [%c,%l][%p%%]")
 
 
 
