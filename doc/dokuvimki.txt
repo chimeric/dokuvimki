@@ -32,8 +32,8 @@ INSTALLATION                                          *dokuvimki-installation*
 Just unpack the tarball in your ~/.vim/ directory. Then edit your .vimrc and
 add your settings (see CONFIGURATION). You'll also need to install the python
 xmlrpclib module and the dokuwikixmlrpc module in order to use this plugin!
-For details about installing it please refer to the documentation specific for
-your OS.
+For details about installing those please refer to the documentation specific
+for your OS.
 
 ------------------------------------------------------------------------------
 CONFIGURATION                                        *dokuvimki-configuration*
@@ -46,9 +46,6 @@ g:DokuVimKi_USER            The username used to login into the remote wiki.
 g:DokuVimKi_PASS            The password used to login into the remote wiki.
 
 g:DokuVimKi_URL             The URL of the remote wiki (no trailing slash!).
-
-g:DokuVimKi_AUTOCONNECT     Set to "yes" to establish a XML-RPC connection to
-                            your remote wiki whenever you start vim.
 
 ------------------------------------------------------------------------------
 COMMANDS                                                  *dokuvimki-commands*
@@ -68,13 +65,13 @@ COMMANDS                                                  *dokuvimki-commands*
                             editing a page you can use the command without
                             supplying a wiki page and it will load a list of
                             backlinks to the page loaded in the edit buffer.
+                            You can use <TAB> to autocomplete pages.
 
 :DWrevisions <page> <offset>Lists the available revisions of a wiki page. You 
                             can use an offset (integer) to view earlier 
                             revisions. The number of shown revisions depends 
                             on the $conf['recent'] setting of the remote wiki. 
-                            By hitting <Enter> the revision under the cursor 
-                            is loaded into the edit buffer.
+                            You can use <TAB> to autocomplete pages.
 
 :DWsearch <pattern>         Searches for matching pages. You can use regular
                             expressions!
@@ -82,7 +79,11 @@ COMMANDS                                                  *dokuvimki-commands*
 :DWmediasearch <pattern>    Searches for matching media files. You can use
                             regular expressions.
 
-:DWchanges                  Lists the recent changes of the remote wiki.
+:DWchanges <timeframe>      Lists the recent changes of the remote wiki.
+                            You can specify a timeframe:
+
+                                Nd      show changes of the last N days
+                                Nw      show changes of the last N weeks
 
 :DWclose                    Closes the current edit buffer (removing edit 
 :DWclose!                   locks on the remote wiki etc.) - if the buffer
