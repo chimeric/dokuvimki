@@ -22,6 +22,10 @@
 if has('python') && version > 700
   command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
+  if !exists('g:DokuVimKi_INDEX_WINWIDTH')
+    let g:DokuVimKi_INDEX_WINWIDTH=30
+  endif
+
   " Custom autocompletion function for wiki pages and media files
   " the global g:pages g:media variables are set/refreshed 
   " when the index is loaded
@@ -162,8 +166,9 @@ class DokuVimKi:
             self.cur_ns = ''
             self.pages  = []
 
+            self.index_winwith = vim.eval('g:DokuVimKi_INDEX_WINWIDTH')
             self.index(self.cur_ns, True)
-            vim.command('silent! 30vsplit')
+            vim.command('silent! ' + self.index_winwith + 'vsplit')
             self.help()
         
 
@@ -172,9 +177,13 @@ class DokuVimKi:
         Establishes the xmlrpc connection to the remote wiki.
         """
 
-        self.dw_user = vim.eval('g:DokuVimKi_USER')
-        self.dw_pass = vim.eval('g:DokuVimKi_PASS')
-        self.dw_url  = vim.eval('g:DokuVimKi_URL')
+        try:
+            self.dw_user = vim.eval('g:DokuVimKi_USER')
+            self.dw_pass = vim.eval('g:DokuVimKi_PASS')
+            self.dw_url  = vim.eval('g:DokuVimKi_URL')
+        except vim.error, err:
+            print >>sys.stderr, "Something went wrong during initialization. Please check your configuration settings."
+            return False
 
         try:
             self.xmlrpc = dokuwikixmlrpc.DokuWikiClient(self.dw_url, self.dw_user, self.dw_pass)
@@ -405,8 +414,8 @@ class DokuVimKi:
         dirs  = []
 
         self.focus(1)
-        vim.command('set winwidth=30')
-        vim.command('set winminwidth=30')
+        vim.command('set winwidth=' + self.index_winwith)
+        vim.command('set winminwidth=' + self.index_winwith)
 
         vim.command('silent! buffer! ' + self.buffers['index'].num)
         vim.command('setlocal modifiable')

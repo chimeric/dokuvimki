@@ -47,6 +47,8 @@ g:DokuVimKi_PASS            The password used to login into the remote wiki.
 
 g:DokuVimKi_URL             The URL of the remote wiki (no trailing slash!).
 
+g:DokuVimKi_INDEX_WINWIDTH  The width of the index window (default 30).
+
 ------------------------------------------------------------------------------
 COMMANDS                                                  *dokuvimki-commands*
 
