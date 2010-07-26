@@ -1034,9 +1034,14 @@ class Buffer:
         self.page = []
         vim.command('silent! buffer! ' + self.num)
         vim.command('setlocal buftype=' + type)
-        vim.command('abbr <buffer> <silent> close DWclose')
-        vim.command('abbr <buffer> <silent> quit DWclose')
-        vim.command('abbr <buffer> <silent> q DWclose')
+        vim.command('abbr <silent> close DWclose')
+        vim.command('abbr <silent> close! DWclose!')
+        vim.command('abbr <silent> quit DWquit')
+        vim.command('abbr <silent> quit! DWquit!')
+        vim.command('abbr <silent> q DWquit')
+        vim.command('abbr <silent> q! DWquit!')
+        vim.command('abbr <silent> qa DWquit')
+        vim.command('abbr <silent> qa! DWquit!')
 
         if type == 'nofile':
             vim.command('setlocal nobuflisted')
