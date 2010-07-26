@@ -1,5 +1,5 @@
 *dokuvimki*   Plugin for editing DokuWiki pages via XML-RPC for Vim > 6.0
-                          For Vim > 6.0
+                          For Vim > 7.0
 
                         By Michael Klier
                         <chi@chimeric.de>

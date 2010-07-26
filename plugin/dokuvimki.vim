@@ -19,7 +19,7 @@
 " URL:          http://www.chimeric.de/projects/dokuwiki/dokuvimki
 "-----------------------------------------------------------------------------
 
-if has('python')
+if has('python') && version > 700
   command! -nargs=0 DokuVimKi exec('py dokuvimki()')
 
   " Custom autocompletion function for wiki pages and media files
@@ -1048,6 +1048,6 @@ def dokuvimki():
 
 EOF
   else
-    command! -nargs=0 DokuVimKi echoerr "DokuVimKi disabled! Python support missing."
+    command! -nargs=0 DokuVimKi echoerr "DokuVimKi disabled! Python support missing or vim version not supported."
 endif
 " vim:ts=4:sw=4:et:enc=utf-8:
