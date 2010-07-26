@@ -143,7 +143,7 @@ class DokuVimKi:
             vim.command("command! -nargs=? DWchanges exec('py dokuvimki.changes(<f-args>)')")
             vim.command("command! -nargs=0 -bang DWclose exec('py dokuvimki.close(\"<bang>\")')")
             vim.command("command! -nargs=0 DWdiffclose exec('py dokuvimki.diff_close()')")
-            vim.command("command! -complete=file -nargs=1 DWupload exec('py dokuvimki.upload(<f-args>,\"<bang>\")')")
+            vim.command("command! -complete=file -bang -nargs=1 DWupload exec('py dokuvimki.upload(<f-args>,\"<bang>\")')")
             vim.command("command! -nargs=0 DWhelp exec('py dokuvimki.help()')")
             vim.command("command! -nargs=0 -bang DWquit exec('py dokuvimki.quit(\"<bang>\")')")
 
