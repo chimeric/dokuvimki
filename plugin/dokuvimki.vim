@@ -134,6 +134,7 @@ class DokuVimKi:
         if self.xmlrpc_init():
 
             vim.command("command! -complete=customlist,CmdModeComplete -nargs=1 DWedit exec('py dokuvimki.edit(<f-args>)')")
+            vim.command("command! -complete=customlist,CmdModeComplete -nargs=1 DWcd exec('py dokuvimki.cd(<f-args>)')")
             vim.command("command! -nargs=? DWsave exec('py dokuvimki.save(<f-args>)')")
             vim.command("command! -nargs=? DWsearch exec('py dokuvimki.search(\"page\", <f-args>)')")
             vim.command("command! -nargs=? DWmediasearch exec('py dokuvimki.search(\"media\", <f-args>)')")
@@ -197,6 +198,9 @@ class DokuVimKi:
             self.diff_close()
 
         self.focus(2)
+
+        if wp.find(':') == -1:
+            wp = self.cur_ns + wp
 
         if not self.buffers.has_key(wp):
 
@@ -379,6 +383,17 @@ class DokuVimKi:
         else:
             print >>sys.stderr, '%s is not a file' % path
 
+
+    def cd(self, query):
+        """
+        Changes into the given namespace.
+        """
+      
+        if query[-1] != ':':
+            query += ':'
+
+        self.index(query)
+  
     
     def index(self, query='', refresh=False):
         """
