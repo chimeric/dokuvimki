@@ -71,7 +71,7 @@ COMMANDS                                                  *dokuvimki-commands*
                             backlinks to the page loaded in the edit buffer.
                             You can use <TAB> to autocomplete pages.
 
-:DWrevisions <page> <offset>Lists the available revisions of a wiki page. You 
+:DWrevisions <page> N       Lists the available revisions of a wiki page. You 
                             can use an offset (integer) to view earlier 
                             revisions. The number of shown revisions depends 
                             on the $conf['recent'] setting of the remote wiki. 
