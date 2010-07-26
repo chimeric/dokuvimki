@@ -49,6 +49,11 @@ g:DokuVimKi_URL             The URL of the remote wiki (no trailing slash!).
 
 g:DokuVimKi_INDEX_WINWIDTH  The width of the index window (default 30).
 
+g:DokuVimKi_DEFAULT_SUM     Default summary used if no summary is given on
+                            save. Defaults to [xmlrpc dokuvimki edit]. 
+                            If you save pages using :w this is used as well
+                            and will result in a minor edit.
+
 ------------------------------------------------------------------------------
 COMMANDS                                                  *dokuvimki-commands*
 

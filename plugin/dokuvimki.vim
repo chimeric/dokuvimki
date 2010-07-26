@@ -26,6 +26,10 @@ if has('python') && version > 700
     let g:DokuVimKi_INDEX_WINWIDTH=30
   endif
 
+  if !exists('g:DokuVimKi_DEFAULT_SUM')
+    let g:DokuVimKi_DEFAULT_SUM = '[xmlrpc dokuvimki edit]'
+  endif
+
   " Custom autocompletion function for wiki pages and media files
   " the global g:pages g:media variables are set/refreshed 
   " when the index is loaded
@@ -165,6 +169,8 @@ class DokuVimKi:
 
             self.cur_ns = ''
             self.pages  = []
+
+            self.default_sum   = vim.eval('g:DokuVimKi_DEFAULT_SUM')
 
             self.index_winwith = vim.eval('g:DokuVimKi_INDEX_WINWIDTH')
             self.index(self.cur_ns, True)
@@ -340,7 +346,7 @@ class DokuVimKi:
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 else:
                     if not sum and text:
-                        sum = '[xmlrpc edit]'
+                        sum   = self.default_sum
                         minor = 1
 
                     try:
