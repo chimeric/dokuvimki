@@ -38,7 +38,7 @@ syn region DokuMedia            start=#{{#   end=#}}# contains=DokuLinkExternal,
 syn region DokuSub              start=#<sub># end=#</sub># keepend
 syn region DokuSup              start=#<sup># end=#</sup># keepend 
 syn region DokuDel              start=#<del># end=#</del># keepend 
-syn region DokuFootnote         matchgroup=DokuFootnoteMatch start=#((#    end=#))# contains=DokuLink,DokuLinkInterwiki,DokuLinkExternal,DokuLinkTitle,DokuMedia,DokuBold,DokuMonospaced,DokuItalic,DokuUnderlined,DokuSmileys,DokuSub,DokuSup,DokuDel keepend
+syn region DokuFootnote         matchgroup=DokuFootnoteMatch start=#((# end=#))# contains=DokuLink,DokuLinkInterwiki,DokuLinkExternal,DokuLinkTitle,DokuMedia,DokuBold,DokuMonospaced,DokuItalic,DokuUnderlined,DokuSmileys,DokuSub,DokuSup,DokuDel keepend
 
 syn region DokuFileGeneric matchgroup=DokuFileMatch start=#<file.*># end=#</file># keepend
 syn region DokuCodeGeneric matchgroup=DokuCodeMatch start=#<code.*># end=#</code># keepend
