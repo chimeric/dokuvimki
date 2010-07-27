@@ -443,7 +443,7 @@ class DokuVimKi:
         else:
             self.cur_ns = query
 
-        if pages:
+        if self.pages:
             for page in self.pages:
                 if not query:
                     if page.find(':', 0) == -1:
