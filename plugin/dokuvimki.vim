@@ -443,45 +443,46 @@ class DokuVimKi:
         else:
             self.cur_ns = query
 
-        for page in self.pages:
-            if not query:
-                if page.find(':', 0) == -1:
-                    pages.append(page)
-                else:
-                    ns = page.split(':', 1)[0] + '/'
-                    if ns not in dirs:
-                        dirs.append(ns)
-            else:
-                if re.search('^' + query, page):
-                    page = page.replace(query, '')
-                    if page.find(':') == -1:
-                        if page not in index:
-                            pages.append(page)
+        if pages:
+            for page in self.pages:
+                if not query:
+                    if page.find(':', 0) == -1:
+                        pages.append(page)
                     else:
                         ns = page.split(':', 1)[0] + '/'
                         if ns not in dirs:
                             dirs.append(ns)
+                else:
+                    if re.search('^' + query, page):
+                        page = page.replace(query, '')
+                        if page.find(':') == -1:
+                            if page not in index:
+                                pages.append(page)
+                        else:
+                            ns = page.split(':', 1)[0] + '/'
+                            if ns not in dirs:
+                                dirs.append(ns)
 
 
-        index.append('ns: ' + self.cur_ns)
+            index.append('ns: ' + self.cur_ns)
 
-        if query:
-            index.append('.. (up a namespace)')
+            if query:
+                index.append('.. (up a namespace)')
 
-        index.append('')
+            index.append('')
 
-        pages.sort()
-        dirs.sort()
-        index = index + dirs + pages
+            pages.sort()
+            dirs.sort()
+            index = index + dirs + pages
 
-        self.buffers['index'].buf[:] = index
+            self.buffers['index'].buf[:] = index
 
-        vim.command('map <silent> <buffer> <enter> :py dokuvimki.cmd("index")<CR>')
-        vim.command('map <silent> <buffer> r :py dokuvimki.cmd("revisions")<CR>')
-        vim.command('map <silent> <buffer> b :py dokuvimki.cmd("backlinks")<CR>')
+            vim.command('map <silent> <buffer> <enter> :py dokuvimki.cmd("index")<CR>')
+            vim.command('map <silent> <buffer> r :py dokuvimki.cmd("revisions")<CR>')
+            vim.command('map <silent> <buffer> b :py dokuvimki.cmd("backlinks")<CR>')
 
-        vim.command('setlocal nomodifiable')
-        vim.command('2')
+            vim.command('setlocal nomodifiable')
+            vim.command('2')
 
 
     def changes(self, timeframe=False):
@@ -783,31 +784,35 @@ class DokuVimKi:
         self.pages = []
         self.media = []
 
-        print >>sys.stdout, "Refreshing page index!"
-        data = self.xmlrpc.all_pages()
+        try:
+            print >>sys.stdout, "Refreshing page index!"
+            data = self.xmlrpc.all_pages()
 
-        if data:
-            for page in data:
-                page = page['id'].encode('utf-8')
-                ns   = page.rsplit(':', 1)[0] + ':'
-                self.pages.append(page)
-                if not ns in self.pages:
-                    self.pages.append(ns)
-                    self.media.append(ns)
-                
+            if data:
+                for page in data:
+                    page = page['id'].encode('utf-8')
+                    ns   = page.rsplit(':', 1)[0] + ':'
+                    self.pages.append(page)
+                    if not ns in self.pages:
+                        self.pages.append(ns)
+                        self.media.append(ns)
+                    
 
-        self.pages.sort()
-        vim.command('let g:pages = "' + " ".join(self.pages) + '"')
+            self.pages.sort()
+            vim.command('let g:pages = "' + " ".join(self.pages) + '"')
 
-        print >>sys.stdout, "Refreshing media index!"
-        data = self.xmlrpc.list_files(':', True)
+            print >>sys.stdout, "Refreshing media index!"
+            data = self.xmlrpc.list_files(':', True)
 
-        if data:
-            for media in data:
-                self.media.append(media['id'].encode('utf-8'))
+            if data:
+                for media in data:
+                    self.media.append(media['id'].encode('utf-8'))
 
-        self.media.sort()
-        vim.command('let g:media = "' + " ".join(self.media) + '"')
+            self.media.sort()
+            vim.command('let g:media = "' + " ".join(self.media) + '"')
+
+        except dokuwikixmlrpc.DokuWikiXMLRPCError, err:
+            print >>sys.stderr, "Failed to fetch page list. Please check your configuration\n%s" % err
 
 
     def lock(self, wp):
