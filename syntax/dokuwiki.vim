@@ -24,7 +24,7 @@ syn match DokuSmileys           #8-)\|8-O\|:-(\|:-)\|=)\|:-/\|:-\\\|:-?\|:-D\|:-
 syn match DokuList              #^\( \{2}\| \{4}\| \{6}\| \{8}\| \{10}\| \{12}\| \{14}\| \{16}\| \{18}\| \{20}\| \{22}\| \{24}\)\(\-\|\*\)# 
 syn match DokuNoWiki            #%%[^%]\+%%#
 syn match DokuQuote             #^>\+#
-syn match DokuLinKInterwiki     #[a-z]\+># contained
+syn match DokuLinkInterwiki     #[a-z]\+># contained
 syn match DokuLinkExternal      #\(http\|https\)\=\(://\)\=\(www\.\)\(\a\|-\)\+\(\.\{1}\l\{2,3}\)\=[^| \]]*#
 syn match DokuLinkMail          #<[^@]\+@[^>]\+>#
 syn match DokuLinkTitle         #|\zs[^|\]{}]\+# contained
@@ -38,7 +38,7 @@ syn region DokuMedia            start=#{{#   end=#}}# contains=DokuLinkExternal,
 syn region DokuSub              start=#<sub># end=#</sub># keepend
 syn region DokuSup              start=#<sup># end=#</sup># keepend 
 syn region DokuDel              start=#<del># end=#</del># keepend 
-syn region DokuFootnote         start=#((#    end=#))# keepend
+syn region DokuFootnote         matchgroup=DokuFootnoteMatch start=#((#    end=#))# contains=DokuLink,DokuLinkInterwiki,DokuLinkExternal,DokuLinkTitle,DokuMedia,DokuBold,DokuMonospaced,DokuItalic,DokuUnderlined,DokuSmileys,DokuSub,DokuSup,DokuDel keepend
 
 syn region DokuFileGeneric matchgroup=DokuFileMatch start=#<file.*># end=#</file># keepend
 syn region DokuCodeGeneric matchgroup=DokuCodeMatch start=#<code.*># end=#</code># keepend
@@ -193,7 +193,6 @@ hi DokuUnderlined         term=underline cterm=underline gui=underline
 hi DokuSub                term=bold ctermbg=LightBlue ctermfg=Black guibg=LightBlue guifg=Black
 hi DokuSup                term=bold ctermbg=LightBlue ctermfg=Black guibg=LightBlue guifg=Black
 hi DokuDel                term=bold ctermbg=LightRed ctermfg=Black guibg=LightRed  guifg=Black
-hi DokuFootnote           term=bold ctermfg=LightGreen guifg=LightGreen
 hi DokuList               term=bold cterm=bold ctermfg=Green gui=bold guifg=Green
 hi DokuTableTH            term=bold cterm=bold ctermfg=Blue gui=bold guifg=Blue
 hi DokuTableTD            term=bold cterm=bold ctermfg=Blue gui=bold guifg=Blue
@@ -204,12 +203,13 @@ hi DokuBlockColor         ctermbg=Gray ctermfg=Black guibg=Gray guifg=Black
 hi DokuFormatColor        cterm=bold ctermfg=Gray gui=bold guifg=Gray
 
 " link to groups 
-hi link DokuMonospaced DokuFormatColor
-hi link DokuFile       DokuBlockColor
-hi link DokuCode       DokuBlockColor
-hi link DokuCodeMatch  DokuBlockColor
-hi link DokuFileMatch  DokuBlockColor
-hi link DokuNoWiki     DokuBlockColor
+hi link DokuMonospaced    DokuFormatColor
+hi link DokuFile          DokuBlockColor
+hi link DokuCode          DokuBlockColor
+hi link DokuCodeMatch     DokuBlockColor
+hi link DokuFileMatch     DokuBlockColor
+hi link DokuNoWiki        DokuBlockColor
+hi link DokuFootnoteMatch DokuBlockColor
 
 let b:current_syntax = "dokuwiki"
 
