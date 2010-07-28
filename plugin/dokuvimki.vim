@@ -724,6 +724,8 @@ class DokuVimKi:
 
         if len(unsaved) == 0:
             vim.command('silent! quitall')
+        else:
+            print >>sys.stdout, "Some buffers contain unsaved changes. Use DWquit! if you really want to quit."
 
 
     def help(self):
