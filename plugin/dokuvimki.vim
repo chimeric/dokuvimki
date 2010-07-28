@@ -344,7 +344,7 @@ class DokuVimKi:
                 print >>sys.stderr, "Error: Current buffer %s is readonly!" % wp
             else:
                 text = "\n".join(self.buffers[wp].buf)
-                if not self.ismodified(wp) and text:
+                if text and not self.ismodified(wp):
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 else:
                     if not sum and text:
@@ -353,11 +353,11 @@ class DokuVimKi:
 
                     try:
                         self.xmlrpc.put_page(wp, text, sum, minor)
+                        self.buffers[wp].page[:] = self.buffers[wp].buf
 
                         if text:
                             vim.command('silent! buffer! ' + self.buffers[wp].num)
                             vim.command('set nomodified')
-                            self.buffers[wp].modified = False
                             print >>sys.stdout, 'Page %s written!' % wp
 
                             if self.needs_refresh:
@@ -713,10 +713,10 @@ class DokuVimKi:
 
         for buffer in self.buffers.keys():
             if self.buffers[buffer].iswp:
-                if not self.buffers[buffer].modified:
+                if not self.ismodified(buffer):
                     vim.command('silent! buffer! ' + self.buffers[buffer].num)
                     self.close(False)
-                elif self.buffers[buffer].modified and bang:
+                elif self.ismodified(buffer) and bang:
                     vim.command('silent! buffer! ' + self.buffers[buffer].num)
                     self.close(True)
                 else:
@@ -744,12 +744,12 @@ class DokuVimKi:
         vim.command("setlocal statusline=%{'[help]'}")
 
 
-    def ismodified(self, wp):
+    def ismodified(self, buffer):
         """
         Checks whether the current buffer or a given buffer is modified or not.
         """
 
-        if self.buffers[wp].modified:
+        if "\n".join(self.buffers[buffer].page).strip() != "\n".join(self.buffers[buffer].buf).strip():
             return True
         else:
             return False
@@ -965,24 +965,6 @@ class DokuVimKi:
         self.buffer_setup()
 
 
-    def buffer_leave(self, wp):
-        """
-        Checks if a buffer was modified when left.
-        """
-
-        vim.command('let g:stdout=""')
-        vim.command('redir => g:stdout')
-        vim.command('silent! set modified?')
-        vim.command('redir END')
-        modified = vim.eval('g:stdout').strip()
-
-        if modified == 'modified':
-            self.buffers[wp].modified = True
-
-        self.buffers[wp].page[:] = self.buffers[wp].buf
-        vim.command('set nomodified')
-
-   
     def buffer_setup(self):
         """
         Setup edit environment.
@@ -1060,15 +1042,11 @@ class Buffer:
 
         if type == 'acwrite':
             self.diff = {}
-            self.modified = False
             vim.command('autocmd! BufEnter <buffer> py dokuvimki.buffer_enter("' + self.name + '")')
-            vim.command('autocmd! BufLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
-            vim.command('autocmd! InsertLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
             vim.command("setlocal statusline=%{'[wp]\ " + self.name + "'}\ %r\ [%c,%l][%p]")
 
         if type == 'nowrite':
             self.diff = {}
-            self.modified = False
             vim.command("setlocal statusline=%{'[wp]\ " + self.name + "'}\ %r\ [%c,%l][%p%%]")
 
 
