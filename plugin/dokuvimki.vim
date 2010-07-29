@@ -347,7 +347,7 @@ class DokuVimKi:
                 if text and not self.ismodified(wp):
                     print >>sys.stdout, "No unsaved changes in current buffer."
                 elif not text and not wp in self.pages:
-                    print >>sys.stdout, "Can't save new empty page %s" % wp
+                    print >>sys.stdout, "Can't save new empty page %s." % wp
                 else:
                     if not sum and text:
                         sum   = self.default_sum
@@ -728,7 +728,7 @@ class DokuVimKi:
         if len(unsaved) == 0:
             vim.command('silent! quitall')
         else:
-            print >>sys.stdout, "Some buffers contain unsaved changes. Use DWquit! if you really want to quit."
+            print >>sys.stderr, "Some buffers contain unsaved changes. Use DWquit! if you really want to quit."
 
 
     def help(self):
