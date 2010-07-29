@@ -346,6 +346,8 @@ class DokuVimKi:
                 text = "\n".join(self.buffers[wp].buf)
                 if text and not self.ismodified(wp):
                     print >>sys.stdout, "No unsaved changes in current buffer."
+                elif not text and not wp in self.pages:
+                    print >>sys.stdout, "Can't save new empty page %s" % wp
                 else:
                     if not sum and text:
                         sum   = self.default_sum
