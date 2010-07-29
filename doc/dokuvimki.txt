@@ -66,7 +66,7 @@ COMMANDS                                                  *dokuvimki-commands*
 
 :DWcd <namespace>           Change into a given namespace.
 
-:DWsave "<summary>"         Save the wiki page in the edit buffer to the
+:DWsave <summary>           Save the wiki page in the edit buffer to the
                             remote wiki. If no edit summary is given it 
                             will be saved as minor edit. You can also use :w
                             but it will not allow to specify a edit summary.
