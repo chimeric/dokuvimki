@@ -353,7 +353,8 @@ class DokuVimKi:
 
                     try:
                         self.xmlrpc.put_page(wp, text, sum, minor)
-                        self.buffers[wp].page[:] = self.buffers[wp].buf
+                        self.buffers[wp].page[:]   = self.buffers[wp].buf
+                        self.buffers[wp].need_save = False
 
                         if text:
                             vim.command('silent! buffer! ' + self.buffers[wp].num)
@@ -751,7 +752,9 @@ class DokuVimKi:
         Checks whether the current buffer or a given buffer is modified or not.
         """
 
-        if "\n".join(self.buffers[buffer].page).strip() != "\n".join(self.buffers[buffer].buf).strip():
+        if self.buffers[buffer].need_save:
+            return True
+        elif "\n".join(self.buffers[buffer].page).strip() != "\n".join(self.buffers[buffer].buf).strip():
             return True
         else:
             return False
@@ -967,6 +970,12 @@ class DokuVimKi:
         self.buffer_setup()
 
 
+    def buffer_leave(self, wp):
+        if "\n".join(self.buffers[wp].buf).strip() != "\n".join(self.buffers[wp].page).strip():
+            self.buffers[wp].page[:] = self.buffers[wp].buf
+            self.buffers[wp].need_save = True
+
+
     def buffer_setup(self):
         """
         Setup edit environment.
@@ -1044,7 +1053,9 @@ class Buffer:
 
         if type == 'acwrite':
             self.diff = {}
+            self.need_save = False
             vim.command('autocmd! BufEnter <buffer> py dokuvimki.buffer_enter("' + self.name + '")')
+            vim.command('autocmd! BufLeave <buffer> py dokuvimki.buffer_leave("' + self.name + '")')
             vim.command("setlocal statusline=%{'[wp]\ " + self.name + "'}\ %r\ [%c,%l][%p]")
 
         if type == 'nowrite':
