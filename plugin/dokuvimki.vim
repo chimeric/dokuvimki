@@ -178,6 +178,8 @@ class DokuVimKi:
             vim.command('set laststatus=2')
             vim.command('silent! ' + self.index_winwith + 'vsplit')
             self.help()
+
+            vim.command("command! -nargs=0 DokuVimKi echo 'DokuVimKi is already running!'")
         
 
     def xmlrpc_init(self):
