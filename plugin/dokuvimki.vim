@@ -213,7 +213,8 @@ class DokuVimKi:
         editing or switches to the correct buffer if the is open already.
         """
 
-        if wp.find(' ') != --1:
+        wp = wp.strip()
+        if wp.find(' ') != -1:
             print >>sys.stderr, "Pagenames cannot contain whitespace. Please use valid pagenames only!\nSee http://dokuwiki.org/pagename" 
             return
 
