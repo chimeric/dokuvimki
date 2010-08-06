@@ -100,7 +100,7 @@ if has('python') && version > 700
 python <<EOF
 # -*- coding: utf-8 -*-
 
-__version__ = '2010-07-01';
+__version__ = '2010-08-06';
 __author__  = 'Michael Klier <chi@chimeric.de>'
 
 import sys
